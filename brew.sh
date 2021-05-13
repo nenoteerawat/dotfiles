@@ -83,6 +83,7 @@ brew install ack
 #brew install exiv2
 brew install git
 brew install git-lfs
+brew install git-flow-avh
 brew install gs
 brew install imagemagick --with-webp
 brew install lua
@@ -96,6 +97,15 @@ brew install ssh-copy-id
 brew install tree
 brew install vbindiff
 brew install zopfli
+
+# Install sublime text
+brew install --cask sublime-text
+
+# Install Docker
+brew cask install docker
+
+# Install AWS
+brew install awscli
 
 # Remove outdated versions from the cellar.
 brew cleanup
