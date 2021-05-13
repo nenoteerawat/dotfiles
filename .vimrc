@@ -75,6 +75,8 @@ set showmode
 set title
 " Show the (partial) command as it’s being typed
 set showcmd
+" Set up vim surround
+set surround
 " Use relative line numbers
 if exists("&relativenumber")
 	set relativenumber
