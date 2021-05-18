@@ -1,7 +1,30 @@
 " Use the Solarized Dark theme
 set background=dark
-colorscheme solarized
+colorscheme sublimemonokai
 let g:solarized_termtrans=1
+
+
+" Go configuration
+let g:go_highlight_format_strings = 1
+let g:go_highlight_function_arguments = 1
+let g:go_highlight_function_calls = 1
+let g:go_highlight_functions = 1
+let g:go_highlight_operators = 1
+let g:go_highlight_types = 1
+let g:go_highlight_extra_types = 1
+let g:go_highlight_fields = 1
+let g:go_highlight_generate_tags = 1
+let g:go_highlight_variable_assignments = 1
+let g:go_highlight_variable_declarations = 1
+let g:go_def_mode='gopls'
+let g:go_info_mode='gopls'
+let g:go_fmt_command = "goimports"
+let g:go_auto_type_info = 1
+call plug#begin()
+Plug 'fatih/vim-go', { 'do': ':GoInstallBinaries' }
+call plug#end()
+au filetype go inoremap <buffer> . .<C-x><C-o>
+
 
 " Make Vim more useful
 set nocompatible
