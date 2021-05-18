@@ -24,6 +24,7 @@ call plug#begin()
 Plug 'fatih/vim-go', { 'do': ':GoInstallBinaries' }
 call plug#end()
 au filetype go inoremap <buffer> . .<C-x><C-o>
+set rtp+=$GOPATH/src/golang.org/x/lint/misc/vim
 
 
 " Make Vim more useful
