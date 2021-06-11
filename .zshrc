@@ -28,6 +28,21 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 
+# Set up .env command
+envup() {
+  local file=$([ -z "$1" ] && echo ".env" || echo ".env.$1")
+
+  if [ -f $file ]; then
+    set -a
+    source $file
+    set +a
+  else
+    echo "No $file file found" 1>&2
+    return 1
+  fi
+}
+
+
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -94,7 +109,7 @@ DISABLE_UPDATE_PROMPT="true"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git golang zsh-autosuggestions zsh-syntax-highlighting git-flow-avh ng docker-compose docker-machine docker yarn)
+plugins=(git golang zsh-autosuggestions zsh-syntax-highlighting git-flow-avh ng docker-compose docker-machine docker yarn minikube)
 
 source $ZSH/oh-my-zsh.sh
 

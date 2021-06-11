@@ -131,6 +131,8 @@
 
 [diff]
 
+	# Set tool for merge code.
+	tool = meld
 	# Detect copies as well as renames.
 	renames = copies
 
@@ -138,6 +140,15 @@
 
 	# Use `hexdump` to diff binary files.
 	textconv = hexdump -v -C
+
+[difftool]
+
+	prompt = false
+
+[difftool "meld"]
+
+  trustExitCode = true
+  cmd = open -W -a Meld --args \"$LOCAL\" \"$PWD/$REMOTE\"
 
 [help]
 
@@ -148,6 +159,17 @@
 
 	# Include summaries of merged commits in newly created merge commit messages
 	log = true
+	tool = meld
+
+[mergetool]
+
+	prompt = false
+	keepBackup = false
+
+[mergetool "meld"]
+
+	trustExitCode = true
+	cmd = open -W -a Meld --args --auto-merge \"$PWD/$LOCAL\" \"$PWD/$BASE\" \"$PWD/$REMOTE\" --output=\"$PWD/$MERGED\"
 
 [push]
 
@@ -181,3 +203,7 @@
 [init]
 
 	defaultBranch = master
+
+[url "git@gitlab.tools.pttep.com:"]
+
+	insteadOf = https://gitlab.tools.pttep.com

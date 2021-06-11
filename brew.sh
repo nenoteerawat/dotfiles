@@ -82,6 +82,7 @@ brew install xz
 brew install ack
 #brew install exiv2
 brew install git
+brew install git-gui
 brew install git-lfs
 brew install git-flow-avh
 brew install gs
@@ -106,6 +107,12 @@ brew cask install docker
 
 # Install AWS
 brew install awscli
+
+brew install clang-format
+brew install protobuf
+
+# Install git merge tools.
+brew install --cask meld
 
 # Remove outdated versions from the cellar.
 brew cleanup
