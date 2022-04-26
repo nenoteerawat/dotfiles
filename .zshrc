@@ -14,13 +14,13 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 source /opt/homebrew/share/antigen/antigen.zsh
 
 # enable Macbook Pro's Touch ID for sudo
-sudotouchid () {
-if ! /usr/bin/grep -Fq "pam_tid.so" /etc/pam.d/sudo 
-then
-/usr/bin/osascript -e 'do shell script "/usr/bin/sed -i '' -e \"1s/^//p; 1s/^.*/auth sufficient pam_tid.so/\" /etc/pam.d/sudo" with administrator privileges'
-fi
-}
-sudotouchid
+# sudotouchid () {
+# if ! /usr/bin/grep -Fq "pam_tid.so" /etc/pam.d/sudo
+# then
+# /usr/bin/osascript -e 'do shell script "/usr/bin/sed -i '' -e \"1s/^//p; 1s/^.*/auth sufficient pam_tid.so/\" /etc/pam.d/sudo" with administrator privileges'
+# fi
+# }
+# sudotouchid
 
 # nvm install
 export NVM_DIR="$HOME/.nvm"
@@ -42,6 +42,12 @@ envup() {
   fi
 }
 
+# add auto-completion directory to zsh's fpath
+fpath=($HOME/.zsh/completion $fpath)
+
+# compsys initialization
+autoload -U compinit
+compinit
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -109,7 +115,7 @@ DISABLE_UPDATE_PROMPT="true"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git golang zsh-autosuggestions zsh-syntax-highlighting git-flow-avh ng docker-compose docker-machine docker yarn minikube)
+plugins=(git golang zsh-autosuggestions zsh-syntax-highlighting git-flow-avh git-flow ng docker-compose docker-machine docker yarn minikube terraform aws kubectl tmux helm)
 
 source $ZSH/oh-my-zsh.sh
 

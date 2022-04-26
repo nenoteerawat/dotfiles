@@ -45,6 +45,7 @@ brew install openssh
 brew install screen
 brew install php
 brew install gmp
+brew install tmux
 
 # Install font tools.
 brew tap bramstein/webfonttools
@@ -104,15 +105,37 @@ brew install --cask sublime-text
 
 # Install Docker
 brew cask install docker
+brew install helm
 
 # Install AWS
 brew install awscli
+brew install awsume
+awsume-configure
 
 brew install clang-format
 brew install protobuf
 
+# Install terraform
+brew install warrensbox/tap/tfswitch
+brew install terragrunt
+
+brew install pre-commit gawk terraform-docs tflint tfsec coreutils checkov terrascan
+
 # Install git merge tools.
 brew install --cask meld
+
+# Grap for golang dot command.
+brew install graphviz
+
+brew install golangci-lint
+
+# Go-swagger
+brew tap go-swagger/go-swagger
+brew install go-swagger
+
+brew install fzf
+brew install neovim
+brew install fish
 
 # Remove outdated versions from the cellar.
 brew cleanup

@@ -3,61 +3,35 @@ filetype off                  " required
 
 " set the runtime path to include Vundle and initialize
 set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
-" alternatively, pass a path where Vundle should install plugins
-"call vundle#begin('~/some/path/here')
 
-" let Vundle manage Vundle, required
-Plugin 'VundleVim/Vundle.vim'
+execute pathogen#infect()
+syntax on
+filetype plugin indent on
 
-" Useful plugin vim
-Plugin 'easymotion/vim-easymotion'
-Plugin 'preservim/nerdtree'
-
-" The following are examples of different formats supported.
-" Keep Plugin commands between vundle#begin/end.
-" plugin on GitHub repo
-Plugin 'tpope/vim-fugitive'
-" plugin from http://vim-scripts.org/vim/scripts.html
-" Plugin 'L9'
-" Git plugin not hosted on GitHub
-" Plugin 'git://git.wincent.com/command-t.git'
-" git repos on your local machine (i.e. when working on your own plugin)
-" Plugin 'file:///home/gmarik/path/to/plugin'
-" The sparkup vim script is in a subdirectory of this repo called vim.
-" Pass the path to set the runtimepath properly.
-Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
-" Install L9 and avoid a Naming conflict if you've already installed a
-" different version somewhere else.
-" Plugin 'ascenator/L9', {'name': 'newL9'}
-
-" All of your Plugins must be added before the following line
-call vundle#end()            " required
-filetype plugin indent on    " required
-" To ignore plugin indent changes, instead use:
-"filetype plugin on
-"
-" Brief help
-" :PluginList       - lists configured plugins
-" :PluginInstall    - installs plugins; append `!` to update or just :PluginUpdate
-" :PluginSearch foo - searches for foo; append `!` to refresh local cache
-" :PluginClean      - confirms removal of unused plugins; append `!` to auto-approve removal
-"
-" see :h vundle for more details or wiki for FAQ
-" Put your non-Plugin stuff after this line
-
-" Specify a directory for plugins
-" - For Neovim: stdpath('data') . '/plugged'
-" - Avoid using standard Vim directory names like 'plugin'
 call plug#begin('~/.vim/plugged')
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf.vim'
+Plug 'stsewd/fzf-checkout.vim'
+Plug 'Xuyuanp/nerdtree-git-plugin'
+Plug 'ryanoasis/vim-devicons'
 
-Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
-Plug 'terryma/vim-multiple-cursors'
-
+" Use release branch (recommend)
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
 call plug#end()
 
+call vundle#begin()
+Plugin 'VundleVim/Vundle.vim'
+Plugin 'vim-airline/vim-airline'
+Plugin 'vim-airline/vim-airline-themes'
+Plugin 'morhetz/gruvbox'
+Plugin 'fatih/vim-go'
+call vundle#end()
+filetype plugin indent on
+
 " Use the Sublime theme
-colorscheme sublimemonokai
+" colorscheme sublimemonokai
+colorscheme gruvbox
+set background=dark
 
 " Go configuration
 au filetype go inoremap <buffer> . .<C-x><C-o>
@@ -80,7 +54,7 @@ set gdefault
 " Use UTF-8 without BOM
 set encoding=utf-8 nobomb
 " Change mapleader
-let mapleader=","
+let mapleader=" "
 " Don’t add empty newlines at the end of files
 set binary
 set noeol
@@ -135,6 +109,33 @@ set showmode
 set title
 " Show the (partial) command as it’s being typed
 set showcmd
+
+" Set up golang syntax start
+
+" disable all linters as that is taken care of by coc.nvim
+let g:go_diagnostics_enabled = 0
+let g:go_metalinter_enabled = []
+
+" don't jump to errors after metalinter is invoked
+let g:go_jump_to_error = 0
+
+" run go imports on file save
+let g:go_fmt_command = "goimports"
+
+" automatically highlight variable your cursor is on
+let g:go_auto_sameids = 0
+
+let g:go_highlight_types = 1
+let g:go_highlight_fields = 1
+let g:go_highlight_functions = 1
+let g:go_highlight_function_calls = 1
+let g:go_highlight_operators = 1
+let g:go_highlight_extra_types = 1
+let g:go_highlight_build_constraints = 1
+let g:go_highlight_generate_tags = 1
+
+" Set up golang syntax end
+
 " Use relative line numbers
 if exists("&relativenumber")
 	set relativenumber
@@ -165,3 +166,13 @@ if has("autocmd")
 	autocmd BufNewFile,BufRead *.md setlocal filetype=markdown
 endif
 
+" Short key for nerdtree.
+nnoremap <leader>n :NERDTreeFocus<CR>
+nnoremap <C-n> :NERDTree<CR>
+nnoremap <C-t> :NERDTreeToggle<CR>
+nnoremap <C-f> :NERDTreeFind<CR>
+
+" Short key for vim fugitive
+nnoremap <leader>gs :G<CR>
+nnoremap <leader>gh :diffget //3<CR>
+nnoremap <leader>gu :diffget //2<CR>
