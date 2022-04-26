@@ -135,7 +135,8 @@ brew install go-swagger
 
 brew install fzf
 brew install neovim
-brew install fish
+brew install --HEAD tree-sitter luajit neovim
+brew install ripgrep
 
 # Remove outdated versions from the cellar.
 brew cleanup
