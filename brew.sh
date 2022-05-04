@@ -137,6 +137,11 @@ brew install fzf
 brew install neovim
 brew install --HEAD tree-sitter luajit neovim
 brew install ripgrep
+brew install numi --cask
+brew install deno
+
+# https://ke-complex-modifications.pqrs.org/
+brew install karabiner-elements --cask
 
 # Remove outdated versions from the cellar.
 brew cleanup

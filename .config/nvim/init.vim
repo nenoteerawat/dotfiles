@@ -151,4 +151,10 @@ endif
 set exrc
 "}}}
 
+" Golang "{{{
+let g:go_def_mode='gopls'
+let g:go_info_mode='gopls'
+" }}}
+
 " vim: set foldmethod=marker foldlevel=0:
+
