@@ -7,7 +7,7 @@ SETUVAR Z_DATA_DIR:/Users/nenoteerawat/\x2elocal/share/z
 SETUVAR Z_EXCLUDE:\x5e/Users/nenoteerawat\x24
 SETUVAR __fish_initialized:3400
 SETUVAR _fisher_jethrokuan_2F_z_files:/Users/nenoteerawat/\x2econfig/fish/functions/__z\x2efish\x1e/Users/nenoteerawat/\x2econfig/fish/functions/__z_add\x2efish\x1e/Users/nenoteerawat/\x2econfig/fish/functions/__z_clean\x2efish\x1e/Users/nenoteerawat/\x2econfig/fish/functions/__z_complete\x2efish\x1e/Users/nenoteerawat/\x2econfig/fish/conf\x2ed/z\x2efish
-SETUVAR _fisher_plugins:jethrokuan/z\x1esimnalamburt/shellder
+SETUVAR _fisher_plugins:simnalamburt/shellder\x1ejethrokuan/z
 SETUVAR fish_color_autosuggestion:555\x1ebrblack
 SETUVAR fish_color_cancel:\x2dr
 SETUVAR fish_color_command:blue
