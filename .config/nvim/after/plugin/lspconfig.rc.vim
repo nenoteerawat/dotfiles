@@ -45,14 +45,14 @@ local on_attach = function(client, bufnr)
   if client.name == 'tsserver' then
     client.resolved_capabilities.document_formatting = false
   end
-
+  
   if client.resolved_capabilities.document_formatting then
     vim.api.nvim_command [[augroup Format]]
     vim.api.nvim_command [[autocmd! * <buffer>]]
     vim.api.nvim_command [[autocmd BufWritePre <buffer> lua vim.lsp.buf.formatting_seq_sync()]]
     vim.api.nvim_command [[augroup END]]
   end
-
+  
   --protocol.SymbolKind = { }
   protocol.CompletionItemKind = {
     '', -- Text
@@ -160,8 +160,26 @@ nvim_lsp.diagnosticls.setup {
   }
 }
 
+-- goimports function custom
+function OrgImports(wait_ms)
+  local params = vim.lsp.util.make_range_params()
+  params.context = {only = {"source.organizeImports"}}
+  local result = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params, wait_ms)
+  for _, res in pairs(result or {}) do
+    for _, r in pairs(res.result or {}) do
+      if r.edit then
+        vim.lsp.util.apply_workspace_edit(r.edit, "UTF-8")
+      else
+        vim.lsp.buf.execute_command(r.command)
+      end
+    end
+  end
+end
+vim.api.nvim_command [[autocmd BufWritePre *.go lua OrgImports(1000)]]
 -- Golang
-nvim_lsp.gopls.setup{}
+nvim_lsp.gopls.setup {
+  on_attach = on_attach
+}
 
 -- icon
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
