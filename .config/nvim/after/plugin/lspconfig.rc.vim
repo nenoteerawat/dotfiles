@@ -7,8 +7,9 @@ lua << EOF
 EOF
 
 lua << EOF
-local nvim_lsp = require('lspconfig')
-local protocol = require'vim.lsp.protocol'
+local nvim_lsp = require 'lspconfig'
+local protocol = require 'vim.lsp.protocol'
+local configs = require 'lspconfig/configs'
 
 -- Use an on_attach function to only map the following keys 
 -- after the language server attaches to the current buffer
@@ -160,6 +161,7 @@ nvim_lsp.diagnosticls.setup {
   }
 }
 
+-- Golang
 -- goimports function custom
 function OrgImports(wait_ms)
   local params = vim.lsp.util.make_range_params()
@@ -175,8 +177,25 @@ function OrgImports(wait_ms)
     end
   end
 end
+
 vim.api.nvim_command [[autocmd BufWritePre *.go lua OrgImports(1000)]]
--- Golang
+
+if not configs.golangcilsp then
+ 	configs.golangcilsp = {
+		default_config = {
+			cmd = {'golangci-lint-langserver'},
+			root_dir = nvim_lsp.util.root_pattern('.git', 'go.mod'),
+			init_options = {
+					command = { "golangci-lint", "run", "--enable-all", "--disable", "lll", "--out-format", "json" };
+			}
+		};
+	}
+end
+
+nvim_lsp.golangci_lint_ls.setup {
+	filetypes = {'go','gomod'}
+}
+
 nvim_lsp.gopls.setup {
   on_attach = on_attach
 }
