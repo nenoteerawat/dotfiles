@@ -212,4 +212,9 @@ vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
   }
 )
 
+-- Rust
+nvim_lsp.rust_analyzer.setup {
+  on_attach = on_attach
+}
+
 EOF
