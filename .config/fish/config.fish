@@ -1,7 +1,6 @@
 set fish_greeting ""
 
 set -gx TERM xterm-256color
-eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # theme
 set -g theme_color_scheme terminal-dark
@@ -9,8 +8,6 @@ set -g fish_prompt_pwd_dir_length 1
 set -g theme_display_user yes
 set -g theme_hide_hostname no
 set -g theme_hostname always
-set -g theme_powerline_fonts no
-set -g theme_nerd_fonts yes
 
 # aliases
 alias ls "ls -p -G"
@@ -32,11 +29,6 @@ set -gx PATH node_modules/.bin $PATH
 # Go
 set -g GOPATH $HOME/go
 set -gx PATH $GOPATH/bin $PATH
-
-# Rust
-set -g RUSTUP_HOME $HOME/.rustup
-set -g CARGO_HOME $HOME/.cargo
-set -gx PATH $HOME/.cargo/bin $PATH
 
 # NVM
 function __check_rvm --on-variable PWD --description 'Do nvm stuff'
@@ -61,6 +53,3 @@ set LOCAL_CONFIG (dirname (status --current-filename))/config-local.fish
 if test -f $LOCAL_CONFIG
   source $LOCAL_CONFIG
 end
-
-# kubectl
-kubectl completion fish | source
