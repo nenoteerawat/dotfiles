@@ -15,9 +15,11 @@ end
 
 function peco_change_directory
   begin
+    set ignore_dir '\.git|\.terragrunt-cache|node_modules'
     echo $HOME/.config
     ghq list -p
-    ls -ad */|perl -pe "s#^#$PWD/#"|grep -v \.git
-    ls -ad $HOME/Developments/*/* |grep -v \.git
+    ls -ad */|perl -pe "s#^#$PWD/#"|grep -v -E $ignore_dir
+    find $HOME/ghq/** -maxdepth 1 -type d|grep -v -E $ignore_dir
+    find $HOME/pttep/** -maxdepth 1 -type d|grep -v -E $ignore_dir
   end | sed -e 's/\/$//' | awk '!a[$0]++' | _peco_change_directory $argv
 end
