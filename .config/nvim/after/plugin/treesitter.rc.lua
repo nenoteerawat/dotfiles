@@ -23,7 +23,9 @@ ts.setup {
     "swift",
     "css",
     "html",
-    "lua"
+    "lua",
+    "go",
+    "terraform"
   },
   autotag = {
     enable = true,
