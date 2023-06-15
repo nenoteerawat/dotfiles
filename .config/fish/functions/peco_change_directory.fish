@@ -19,7 +19,8 @@ function peco_change_directory
     echo $HOME/.config
     ghq list -p
     ls -ad */|perl -pe "s#^#$PWD/#"|grep -v -E $ignore_dir
-    find $HOME/ghq/** -maxdepth 1 -type d|grep -v -E $ignore_dir
-    find $HOME/pttep/** -maxdepth 1 -type d|grep -v -E $ignore_dir
+    find $HOME/pttep/* -maxdepth 1 -type d|grep -v -E $ignore_dir
+    find $HOME/.ghq/github.com/nenoteerawat/* -maxdepth 1 -type d|grep -v -E $ignore_dir
+    find $HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform/delorean-platform/* -maxdepth 1 -type d|grep -v -E $ignore_dir
   end | sed -e 's/\/$//' | awk '!a[$0]++' | _peco_change_directory $argv
 end
