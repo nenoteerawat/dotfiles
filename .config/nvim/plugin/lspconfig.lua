@@ -131,6 +131,11 @@ nvim_lsp.terraform_lsp.setup {
   capabilities = capabilities
 }
 
+nvim_lsp.helm_ls.setup {
+  on_attach = on_attach,
+  capabilities = capabilities,
+}
+
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
   vim.lsp.diagnostic.on_publish_diagnostics, {
     underline = true,
