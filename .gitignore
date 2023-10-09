@@ -24,6 +24,8 @@ Gemfile.lock
 node_modules
 bower_components
 fishd.*
+_tide*
+__z*
 
 # Vim
 Session.vim
