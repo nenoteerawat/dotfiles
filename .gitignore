@@ -69,5 +69,6 @@ Pods/
 
 
 .config/fish/fish_variables
-.config/gcloud/
-.config/fontforge/
+.config/gcloud
+.config/fontforge
+.config/iterm2
