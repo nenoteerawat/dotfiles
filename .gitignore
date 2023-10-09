@@ -74,3 +74,4 @@ Pods/
 .config/gcloud
 .config/fontforge
 .config/iterm2
+.config/fish/functions/tide/
