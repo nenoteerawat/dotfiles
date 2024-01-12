@@ -13,6 +13,7 @@ function fzf_change_directory
     begin
         set ignore_dir '\.git|\.terragrunt-cache|node_modules'
         echo $HOME/.config
+        echo $HOME/.ghq/github.com/nenoteerawat/dotfiles
         find $(ghq root) -maxdepth 4 -type d -name .git | sed 's/\/\.git//'
         find $HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform/delorean-infrastructure/iac/* -maxdepth 1 -type d | grep -v -E $ignore_dir
         find $HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform/delorean-platform/* -maxdepth 1 -type d | grep -v -E $ignore_dir
