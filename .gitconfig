@@ -18,7 +18,7 @@
   ci = commit
   ca = commit -a
   ps = "!git push origin $(git rev-parse --abbrev-ref HEAD)"
-  pl = "!git pull origin $(git rev-parse --abbrev-ref HEAD)"
+  pl = "!git rev-parse --abbrev-ref --symbolic-full-name @{u} | awk -F'/' '{print $1}' | xargs -I {} git pull {} $(git rev-parse --abbrev-ref --symbolic-full-name @{u} | awk -F'{}/' '{print $2}'):$(git rev-parse --abbrev-ref HEAD)"
   st = status
   br = branch
   ba = branch -a
