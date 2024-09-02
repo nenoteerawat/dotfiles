@@ -50,6 +50,7 @@ Check out my app called [Inkdrop](https://www.inkdrop.app/)
 - [Eza](https://github.com/eza-community/eza) - `ls` replacement
 - [ghq](https://github.com/x-motemen/ghq) - Local Git repository organizer
 - [fzf](https://github.com/PatrickF1/fzf.fish) - Interactive filtering
+- [fzf-tab](https://github.com/Aloxaf/fzf-tab) - FZF tab to autocomple zsh shell
 
 ## PowerShell setup (Windows)
 
