@@ -37,11 +37,50 @@ ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=6'
 
 # NVM Setup
 export NVM_DIR="$HOME/.nvm"
-[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
-[ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
+[ -s "$(brew --prefix)/opt/nvm/nvm.sh" ] && \. "$(brew --prefix)/opt/nvm/nvm.sh"  # This loads nvm
+[ -s "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
 
-# Anguler CLI Setup
+# ZSH Auto Complete
+# Git Flow CLI
+source $HOME/.ghq/github.com/bobthecow/git-flow-completion/git-flow-completion.zsh
+# Anguler CLI
 source <(ng completion script)
+# Atlas CLI
+source <(atlas completion zsh)
+# Kubectl CLI
+source <(kubectl completion zsh)
+# Helm CLI
+source <(helm completion zsh)
+# Google Cloud SDK CLI
+source "$(brew --prefix)/share/google-cloud-sdk/completion.zsh.inc"
+source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"
+# Docker CLI
+source <(docker completion zsh)
+# Trivy CLI
+source <(trivy completion zsh)
+# Dagger CLI
+source <(dagger completion zsh)
+
+#compdef gitlab-ci-local
+###-begin-gitlab-ci-local-completions-###
+#
+# yargs command completion script
+#
+# Installation: /opt/homebrew/bin/gitlab-ci-local completion >> ~/.zshrc
+#    or /opt/homebrew/bin/gitlab-ci-local completion >> ~/.zprofile on OSX.
+#
+_gitlab-ci-local_yargs_completions()
+{
+  local reply
+  local si=$IFS
+  IFS=$'
+' reply=($(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" /opt/homebrew/bin/gitlab-ci-local --get-yargs-completions "${words[@]}"))
+  IFS=$si
+  _describe 'values' reply
+}
+compdef _gitlab-ci-local_yargs_completions gitlab-ci-local
+###-end-gitlab-ci-local-completions-###
+
 
 # Custom Function
 cdzgit() {
@@ -58,16 +97,16 @@ cdznorm() {
     if [[ $input = "git" ]]; then
       cdzgit
     elif [[ $input = "pttep" ]]; then
-      selected_dir="~/pttep/" 
+      selected_dir="$HOME/pttep/" 
     elif [[ $input = "desk" ]]; then
-      selected_dir="~/Desktop/"
+      selected_dir="$HOME/Desktop/"
     elif [[ $input = "load" ]]; then
-      selected_dir="~/Downloads/"
+      selected_dir="$HOME/Downloads/"
     else
       selected_dir=$input
     fi
     if [[ $input != "git" ]]; then
-      selected_dir=$(fd -t d . "$input" | fzf +m --height 50% --preview 'tree -C {}')
+      selected_dir=$(fd -t d . "$selected_dir" | fzf +m --height 50% --preview 'tree -C {}')
       if [[ -n "$selected_dir" ]]; then
           # Change to the selected directory
           cd "$selected_dir" || return 1
@@ -84,6 +123,7 @@ alias llta="llt -a"
 alias cdz='cdznorm'
 alias vim='nvim'
 alias vi='nvim'
+alias gcl='gitlab-ci-local'
 
 
 # Bind Key
@@ -101,5 +141,5 @@ source ~/.ghq/github.com/Aloxaf/fzf-tab/fzf-tab.plugin.zsh
 
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /opt/homebrew/bin/terraform terraform
-
 complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
+complete -o nospace -C /opt/homebrew/bin/vault vault

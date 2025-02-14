@@ -51,6 +51,9 @@ Check out my app called [Inkdrop](https://www.inkdrop.app/)
 - [ghq](https://github.com/x-motemen/ghq) - Local Git repository organizer
 - [fzf](https://github.com/PatrickF1/fzf.fish) - Interactive filtering
 - [fzf-tab](https://github.com/Aloxaf/fzf-tab) - FZF tab to autocomple zsh shell
+- [git-flow](https://github.com/nvie/gitflow.git) - Git Flow
+- [git-flow-complete](https://github.com/bobthecow/git-flow-completion.git) - Git Flow Completion
+- [custom-alfred-iterm-scripts](https://github.com/vitorgalvao/custom-alfred-iterm-scripts.git) - Alfred scripts for iTerm
 
 ## PowerShell setup (Windows)
 
