@@ -60,6 +60,8 @@ source <(docker completion zsh)
 source <(trivy completion zsh)
 # Dagger CLI
 source <(dagger completion zsh)
+# Github CLI
+source <(gh completion -s zsh)
 
 #compdef gitlab-ci-local
 ###-begin-gitlab-ci-local-completions-###
@@ -143,3 +145,8 @@ autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /opt/homebrew/bin/terraform terraform
 complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
 complete -o nospace -C /opt/homebrew/bin/vault vault
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/nenoteerawat/.docker/completions $fpath)
+autoload -Uz compinit
+compinit
+# End of Docker CLI completions
