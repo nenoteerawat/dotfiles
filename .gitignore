@@ -56,14 +56,25 @@ DerivedData
 # CocoaPods
 Pods/
 
-# Atom.io
-.atom/packages/save-session
-.atom/compile-cache
-.atom/storage
-
 # Fish local config
 .config/fish/config-local.fish
 .config/fish/fish_variables.x86_64
 
 # Karabiner
 .config/karabiner/automatic_backups
+
+# Tmux
+.config/tmux/plugins
+
+# Lazygit
+.config/lazygit/state.yml
+.config/nvim/lazy-lock.json
+.config/nvim/lazyvim.json
+
+# Zed
+.config/zed/.tmp*
+.config/zed/embeddings
+.config/zed/prompts
+
+# Claude Code
+.claude/*.local.json

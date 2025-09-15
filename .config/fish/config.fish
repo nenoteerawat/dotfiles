@@ -15,6 +15,8 @@ alias la "ls -A"
 alias ll "ls -l"
 alias lla "ll -A"
 alias g git
+alias c claude
+alias claude-yolo "claude --dangerously-skip-permissions"
 command -qv nvim && alias vim nvim
 
 set -gx EDITOR nvim
@@ -54,5 +56,5 @@ end
 
 set LOCAL_CONFIG (dirname (status --current-filename))/config-local.fish
 if test -f $LOCAL_CONFIG
-    source $LOCAL_CONFIG
+  source $LOCAL_CONFIG
 end

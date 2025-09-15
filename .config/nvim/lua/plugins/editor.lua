@@ -14,21 +14,18 @@ return {
 	},
 
 	{
-		"echasnovski/mini.hipatterns",
+		"brenoprata10/nvim-highlight-colors",
 		event = "BufReadPre",
 		opts = {
-			highlighters = {
-				hsl_color = {
-					pattern = "hsl%(%d+,? %d+,? %d+%)",
-					group = function(_, match)
-						local utils = require("solarized-osaka.hsl")
-						local h, s, l = match:match("hsl%((%d+),? (%d+),? (%d+)%)")
-						h, s, l = tonumber(h), tonumber(s), tonumber(l)
-						local hex_color = utils.hslToHex(h, s, l)
-						return MiniHipatterns.compute_hex_color_group(hex_color, "bg")
-					end,
-				},
-			},
+			render = "background",
+			enable_hex = true,
+			enable_short_hex = true,
+			enable_rgb = true,
+			enable_hsl = true,
+			enable_hsl_without_function = true,
+			enable_ansi = true,
+			enable_var_usage = true,
+			enable_tailwind = true,
 		},
 	},
 
@@ -46,7 +43,7 @@ return {
 	},
 
 	{
-		"telescope.nvim",
+		"nvim-telescope/telescope.nvim",
 		dependencies = {
 			{
 				"nvim-telescope/telescope-fzf-native.nvim",
@@ -79,7 +76,9 @@ return {
 				";r",
 				function()
 					local builtin = require("telescope.builtin")
-					builtin.live_grep()
+					builtin.live_grep({
+						additional_args = { "--hidden" },
+					})
 				end,
 				desc = "Search for a string in your current working directory and get results live as you type, respects .gitignore",
 			},
@@ -122,6 +121,14 @@ return {
 					builtin.treesitter()
 				end,
 				desc = "Lists Function names, variables, from Treesitter",
+			},
+			{
+				";c",
+				function()
+					local builtin = require("telescope.builtin")
+					builtin.lsp_incoming_calls()
+				end,
+				desc = "Lists LSP incoming calls for word under the cursor",
 			},
 			{
 				"sf",
@@ -204,5 +211,42 @@ return {
 			require("telescope").load_extension("fzf")
 			require("telescope").load_extension("file_browser")
 		end,
+	},
+
+	{
+		"kazhala/close-buffers.nvim",
+		event = "VeryLazy",
+		keys = {
+			{
+				"<leader>th",
+				function()
+					require("close_buffers").delete({ type = "hidden" })
+				end,
+				"Close Hidden Buffers",
+			},
+			{
+				"<leader>tu",
+				function()
+					require("close_buffers").delete({ type = "nameless" })
+				end,
+				"Close Nameless Buffers",
+			},
+		},
+	},
+
+	{
+		"saghen/blink.cmp",
+		opts = {
+			completion = {
+				menu = {
+					winblend = vim.o.pumblend,
+				},
+			},
+			signature = {
+				window = {
+					winblend = vim.o.pumblend,
+				},
+			},
+		},
 	},
 }
