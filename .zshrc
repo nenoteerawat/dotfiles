@@ -62,7 +62,11 @@ source <(trivy completion zsh)
 source <(dagger completion zsh)
 # Github CLI
 source <(gh completion -s zsh)
-
+# Setup Nix-Shell
+source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh 2>/dev/null || \
+source /nix/var/nix/profiles/default/etc/profile.d/nix.sh
+# Setup DevBox Gobal
+eval "$(devbox global shellenv --init-hook)"
 #compdef gitlab-ci-local
 ###-begin-gitlab-ci-local-completions-###
 #
