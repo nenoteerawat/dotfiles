@@ -22,7 +22,7 @@ zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 # switch group using `<` and `>`
 zstyle ':fzf-tab:*' switch-group '<' '>'
 
-# ZSH Autocomplete & Autosuggestion & Syntx Highlighting & 
+# ZSH Autocomplete & Autosuggestion & Syntx Highlighting &
 #source "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
 source "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
 source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
@@ -103,7 +103,7 @@ cdznorm() {
     if [[ $input = "git" ]]; then
       cdzgit
     elif [[ $input = "pttep" ]]; then
-      selected_dir="$HOME/pttep/" 
+      selected_dir="$HOME/pttep/"
     elif [[ $input = "desk" ]]; then
       selected_dir="$HOME/Desktop/"
     elif [[ $input = "load" ]]; then
@@ -118,6 +118,34 @@ cdznorm() {
           cd "$selected_dir" || return 1
       fi
     fi
+}
+
+# Exact port of your fish function
+fzf_change_directory() {
+  emulate -L zsh
+  setopt pipefail
+
+  local ignore_dir='\.git|\.terragrunt-cache|node_modules'
+
+  {
+    # 1) Fixed entries (echo, no existence checks — same as fish)
+    echo "$HOME/.config"
+    echo "$HOME/.ghq/github.com/nenoteerawat/dotfiles"
+
+    # 2) ghq repos: find .../.git then strip '/.git'
+    if command -v ghq >/dev/null 2>&1; then
+      find "$(ghq root)" -maxdepth 4 -type d -name .git 2>/dev/null | sed 's/\/\.git$//'
+    fi
+
+    # 3) Specific groups (match fish: base/* then -maxdepth 1 -type d, then grep -v -E)
+    find $HOME/.ghq/gitlab.tools.pttep.com/ep-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+
+    # 4) Current dir immediate subdirs → absolute, then ignore
+    ls -ad */ 2>/dev/null | perl -pe "s#^#$PWD/#" | grep -v -E "$ignore_dir"
+  } | sed -e 's/\/$//' | awk '!a[$0]++' | fzf "$@" | while read -r dir; do
+    cd "$dir" && nvim .
+  done
 }
 
 # Aliases
@@ -135,6 +163,10 @@ alias gcl='gitlab-ci-local'
 # Bind Key
 bindkey '^[[A' history-substring-search-up
 bindkey '^[[B' history-substring-search-down
+
+fzf_change_directory-widget() { zle -I; fzf_change_directory; zle reset-prompt }
+zle -N fzf_change_directory-widget
+bindkey '^F' fzf_change_directory-widget
 
 if type brew &>/dev/null
 then
