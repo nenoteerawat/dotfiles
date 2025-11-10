@@ -87,6 +87,20 @@ _gitlab-ci-local_yargs_completions()
 compdef _gitlab-ci-local_yargs_completions gitlab-ci-local
 ###-end-gitlab-ci-local-completions-###
 
+# Setup .config for zsh shell
+# XDG (where Neovim & Lazy look by default anyway; set explicitly for consistency)
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CACHE_HOME="$HOME/.cache"
+
+# Make sure Mason & other tool shims are discoverable
+export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
+
+# If you use mise/asdf/nvm, ensure their init runs in zsh
+# mise
+if command -v mise >/dev/null 2>&1; then eval "$(mise activate zsh)"; fi
+# nvm (example)
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
 
 # Custom Function
 cdzgit() {
@@ -139,12 +153,14 @@ fzf_change_directory() {
 
     # 3) Specific groups (match fish: base/* then -maxdepth 1 -type d, then grep -v -E)
     find $HOME/.ghq/gitlab.tools.pttep.com/ep-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    find $HOME/.ghq/gitlab.tools.pttep.com/aws-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
     find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
 
     # 4) Current dir immediate subdirs → absolute, then ignore
     ls -ad */ 2>/dev/null | perl -pe "s#^#$PWD/#" | grep -v -E "$ignore_dir"
   } | sed -e 's/\/$//' | awk '!a[$0]++' | fzf "$@" | while read -r dir; do
-    cd "$dir" && nvim .
+    cd "$dir" # && nvim .
   done
 }
 
