@@ -156,7 +156,6 @@ fzf_change_directory() {
     find $HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
     find $HOME/.ghq/gitlab.tools.pttep.com/aws-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
     find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
-    find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
 
     # 4) Current dir immediate subdirs → absolute, then ignore
     ls -ad */ 2>/dev/null | perl -pe "s#^#$PWD/#" | grep -v -E "$ignore_dir"
