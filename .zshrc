@@ -153,6 +153,7 @@ fzf_change_directory() {
 
     # 3) Specific groups (match fish: base/* then -maxdepth 1 -type d, then grep -v -E)
     find $HOME/.ghq/gitlab.tools.pttep.com/ep-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    find $HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
     find $HOME/.ghq/gitlab.tools.pttep.com/aws-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
     find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
     find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
