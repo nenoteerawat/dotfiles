@@ -58,19 +58,24 @@ keymap.set("n", "<C-w><right>", "<C-w>>")
 keymap.set("n", "<C-w><up>", "<C-w>+")
 keymap.set("n", "<C-w><down>", "<C-w>-")
 
--- Diagnostics
+-- Diagnostics (override LazyVim defaults)
+keymap.del("n", "]d") -- Remove LazyVim's default
+keymap.del("n", "[d") -- Remove LazyVim's default
 keymap.set("n", "<C-j>", function()
-	vim.diagnostic.goto_next()
+  vim.diagnostic.goto_next()
+end, opts)
+keymap.set("n", "<C-k>", function()
+  vim.diagnostic.goto_prev()
 end, opts)
 
 keymap.set("n", "<leader>r", function()
-	require("craftzdog.hsl").replaceHexWithHSL()
+  require("craftzdog.hsl").replaceHexWithHSL()
 end)
 
 keymap.set("n", "<leader>i", function()
-	require("craftzdog.lsp").toggleInlayHints()
+  require("craftzdog.lsp").toggleInlayHints()
 end)
 
 vim.api.nvim_create_user_command("ToggleAutoformat", function()
-	require("craftzdog.lsp").toggleAutoformat()
+  require("craftzdog.lsp").toggleAutoformat()
 end, {})
