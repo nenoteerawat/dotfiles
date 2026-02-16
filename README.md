@@ -212,6 +212,52 @@ tmux configuration with Solarized theme and vi mode.
 - `.czrc` - cz-git adapter for conventional commits
 - `.config/lazygit/config.yml` - lazygit with commitizen (`git cz`)
 
+## Syncing with upstream (craftzdog)
+
+This repo is forked from [craftzdog/dotfiles-public](https://github.com/craftzdog/dotfiles-public). To pull in new changes from upstream:
+
+### One-time setup
+
+```bash
+# Add the upstream remote (only needed once)
+git remote add craftzdog https://github.com/craftzdog/dotfiles-public.git
+```
+
+### Update workflow
+
+```bash
+# 1. Fetch latest changes from upstream
+git fetch craftzdog
+
+# 2. Make sure you're on your master branch
+git checkout master
+
+# 3. Review what's changed upstream before merging
+git log master..craftzdog/master --oneline
+
+# 4. Merge upstream changes into your branch
+git merge craftzdog/master --no-commit
+
+# 5. Review the merge — resolve conflicts and discard changes you don't want
+git diff --staged
+
+# 6. Commit the merge
+git commit -m "feat: sync with upstream craftzdog/dotfiles-public"
+
+# 7. Push to your GitHub repo
+git push origin master
+```
+
+### Tips
+
+- Use `--no-commit` on merge so you can review and cherry-pick only the changes you want before committing.
+- If a merge has too many conflicts, you can abort with `git merge --abort` and cherry-pick individual commits instead:
+  ```bash
+  git log craftzdog/master --oneline   # find the commit hash you want
+  git cherry-pick <commit-hash>
+  ```
+- Keep your personal customizations (`.zshrc`, custom functions, etc.) on `master` and only pull Neovim/tmux updates from upstream to minimize conflicts.
+
 ## Credits
 
 Forked from [craftzdog/dotfiles-public](https://github.com/craftzdog/dotfiles-public) by [Takuya Matsuyama](https://github.com/craftzdog).
