@@ -55,3 +55,10 @@
 	process = git-lfs filter-process
 [ghq]
   root = ~/.ghq
+[maintenance]
+	repo = /Users/nenoteerawat/.ghq/platform-engineering
+	repo = /Users/nenoteerawat/.ghq/git@github.com:pttep-pcl/platform-engineering
+	repo = /Users/nenoteerawat/.ghq/github.com/pttep-pcl/platform-engineering
+	repo = /Users/nenoteerawat/.ghq/github.com/pttep-pcl/test-sparo-clone/platform-engineering
+[url "git@github.com:pttep-pcl/"]
+	insteadOf = https://github.com/pttep-pcl/

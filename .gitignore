@@ -78,3 +78,6 @@ Pods/
 
 # Claude Code
 .claude/*.local.json
+
+# Jetbrain tools
+.idea

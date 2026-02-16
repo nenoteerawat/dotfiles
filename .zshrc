@@ -1,8 +1,10 @@
 eval "$(/opt/homebrew/bin/brew shellenv)"
-eval "$(starship init zsh)"
 # Golang PATH
 export GOPATH=$HOME/.go
 export PATH=$PATH:$GOPATH/bin
+
+# Goland Jetbrain IDE
+export PATH=$PATH:Applications/GoLand.app/Contents/MacOS
 
 # FZF Style
 # Tmux FZF stile
@@ -62,6 +64,8 @@ source <(trivy completion zsh)
 source <(dagger completion zsh)
 # Github CLI
 source <(gh completion -s zsh)
+# k3d CLI
+source <(k3d completion zsh)
 # Setup Nix-Shell
 source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh 2>/dev/null || \
 source /nix/var/nix/profiles/default/etc/profile.d/nix.sh
@@ -134,6 +138,27 @@ cdznorm() {
     fi
 }
 
+# ghq with sparo clone and Specific profile
+# Usage:
+#   ghq-sparo https://github.com/pttep-pcl/platform-engineering.git backend
+#   ghq-sparo https://github.com/pttep-pcl/platform-engineering.git
+ghq-sparo() {
+  local repo_url="${1:?Usage: ghq-sparo <repo-url> [profile]}"
+  local profile="${2:-}"
+  # Extract host/owner from URL (e.g., github.com/pttep-pcl)
+  local repo_path
+  repo_path=$(echo "$repo_url" | sed -E 's|^git@||; s|https?://||; s|:|/|; s|\.git$||; s|/[^/]+$||')
+
+  mkdir -p "$(ghq root)/$repo_path"
+  cd "$(ghq root)/$repo_path"
+
+  if [ -n "$profile" ]; then
+    sparo clone "$repo_url" --profile "$profile"
+  else
+    sparo clone "$repo_url"
+  fi
+}
+
 # Exact port of your fish function
 fzf_change_directory() {
   emulate -L zsh
@@ -188,7 +213,9 @@ if type brew &>/dev/null
 then
   FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 fi
-autoload -Uz compinit && compinit
+
+# Config starship (must be last)
+eval "$(starship init zsh)"
 
 # FZF-TAB Auto Complete
 source ~/.ghq/github.com/Aloxaf/fzf-tab/fzf-tab.plugin.zsh
@@ -197,8 +224,7 @@ autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /opt/homebrew/bin/terraform terraform
 complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
 complete -o nospace -C /opt/homebrew/bin/vault vault
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+
+# Docker CLI completions fpath (moved here so single compinit picks them up)
 fpath=(/Users/nenoteerawat/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
-# End of Docker CLI completions
+autoload -Uz compinit && compinit
