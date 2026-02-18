@@ -134,13 +134,7 @@ return {
 				},
 			},
 			setup = {},
-		},
-	},
-	{
-		"neovim/nvim-lspconfig",
-		opts = function()
-			local keys = require("lazyvim.plugins.lsp.keymaps").get()
-			vim.list_extend(keys, {
+			keys = {
 				{
 					"gd",
 					function()
@@ -150,7 +144,7 @@ return {
 					desc = "Goto Definition",
 					has = "definition",
 				},
-			})
-		end,
+			},
+		},
 	},
 }

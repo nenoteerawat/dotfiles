@@ -21,6 +21,7 @@ return {
 				"scss",
 				"sql",
 				"svelte",
+				"lua",
 			},
 
 			-- matchup = {
