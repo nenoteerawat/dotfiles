@@ -13,6 +13,7 @@ return {
 				"fish",
 				"gitignore",
 				"go",
+				"gotmpl", -- required by helm treesitter highlights
 				"graphql",
 				"http",
 				"java",
@@ -54,11 +55,9 @@ return {
 				},
 			},
 		},
-		config = function(_, opts)
-			local TS = require("nvim-treesitter")
-			TS.setup(opts)
-
-			-- MDX
+		-- MDX setup via init so LazyVim's config (which creates the
+		-- lazyvim_treesitter FileType autocmd for highlighting) is not overridden
+		init = function()
 			vim.filetype.add({
 				extension = {
 					mdx = "mdx",

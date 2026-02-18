@@ -12,6 +12,7 @@ return {
 				"tailwindcss-language-server",
 				"typescript-language-server",
 				"css-lsp",
+				"yamllint",
 			})
 		end,
 	},
@@ -60,10 +61,48 @@ return {
 					},
 				},
 				html = {},
+				-- disable yamlls when inside a helm chart (handled by helm_ls)
 				yamlls = {
 					settings = {
 						yaml = {
 							keyOrdering = false,
+						},
+					},
+					-- nvim 0.11: root_dir receives bufnr, not fname
+					root_dir = function(bufnr)
+						-- don't start yamlls if a Chart.yaml exists up the tree
+						if vim.fs.root(bufnr, { "Chart.yaml" }) then
+							return nil
+						end
+						return vim.fs.root(bufnr, { ".git", ".yamllint", ".yamllint.yml", ".yamllint.yaml" })
+							or vim.fn.getcwd()
+					end,
+				},
+
+				-- helm_ls handles helm templates + values files
+				-- embeds yaml-language-server internally for values file features
+				helm_ls = {
+					settings = {
+						["helm-ls"] = {
+							logLevel = "info",
+							valuesFiles = {
+								mainValuesFile = "values.yaml",
+								lintOverlayValuesFile = "values.lint.yaml",
+								additionalValuesFilesGlobPattern = "values*.yaml",
+							},
+							yamlls = {
+								enabled = true,
+								diagnosticsLimit = 50,
+								showDiagnosticsDirectly = false,
+								path = "yaml-language-server",
+								config = {
+									schemas = {
+										kubernetes = "templates/**",
+									},
+									completion = true,
+									hover = true,
+								},
+							},
 						},
 					},
 				},

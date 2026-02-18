@@ -72,6 +72,22 @@ return {
     opts = {
       formatters_by_ft = {
         lua = { "stylua" },
+        -- helm templates use Go template syntax, no formatter available
+        helm = {},
+        -- helm values files are pure YAML, can use prettier
+        ["yaml.helm-values"] = { "prettier" },
+      },
+    },
+  },
+
+  -- Linter
+  {
+    "mfussenegger/nvim-lint",
+    opts = {
+      linters_by_ft = {
+        -- helm templates: diagnostics handled by helm_ls LSP (runs helm lint internally)
+        -- helm values files: yamllint for YAML validation
+        ["yaml.helm-values"] = { "yamllint" },
       },
     },
   },
