@@ -252,6 +252,29 @@ return {
     },
   },
   {
+    "pwntester/octo.nvim",
+    cmd = "Octo",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope.nvim",
+      "nvim-tree/nvim-web-devicons",
+    },
+    opts = {
+      picker = "telescope",
+      enable_builtin = true,
+      default_merge_method = "squash",
+    },
+    keys = {
+      { "<leader>opl", "<cmd>Octo pr list<cr>", desc = "List PRs" },
+      { "<leader>ops", "<cmd>Octo pr search<cr>", desc = "Search PRs" },
+      { "<leader>opc", "<cmd>Octo pr create<cr>", desc = "Create PR" },
+      { "<leader>opo", "<cmd>Octo pr checkout<cr>", desc = "Checkout PR" },
+      { "<leader>oil", "<cmd>Octo issue list<cr>", desc = "List Issues" },
+      { "<leader>oic", "<cmd>Octo issue create<cr>", desc = "Create Issue" },
+    },
+  },
+
+  {
     "zerbiniandrea/conventional-commits.nvim",
     cmd = "ConventionalCommit",
     config = function()
