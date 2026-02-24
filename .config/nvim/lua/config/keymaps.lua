@@ -59,14 +59,14 @@ keymap.set("n", "<C-w><up>", "<C-w>+")
 keymap.set("n", "<C-w><down>", "<C-w>-")
 
 -- Diagnostics (override LazyVim defaults)
-keymap.del("n", "]d") -- Remove LazyVim's default
-keymap.del("n", "[d") -- Remove LazyVim's default
-keymap.set("n", "<C-j>", function()
-  vim.diagnostic.goto_next()
-end, opts)
-keymap.set("n", "<C-k>", function()
-  vim.diagnostic.goto_prev()
-end, opts)
+-- keymap.del("n", "]d") -- Remove LazyVim's default
+-- keymap.del("n", "[d") -- Remove LazyVim's default
+-- keymap.set("n", "<C-j>", function()
+--   vim.diagnostic.goto_next()
+-- end, opts)
+-- keymap.set("n", "<C-k>", function()
+--   vim.diagnostic.goto_prev()
+-- end, opts)
 
 keymap.set("n", "<leader>r", function()
   require("craftzdog.hsl").replaceHexWithHSL()

@@ -43,8 +43,8 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
 
 # ZSH Auto Complete
-# Git Flow CLI
-source $HOME/.ghq/github.com/bobthecow/git-flow-completion/git-flow-completion.zsh
+# Gitflow CLI
+source ~/.git-flow-completion.zsh
 # Anguler CLI
 source <(ng completion script)
 # Atlas CLI
