@@ -6,6 +6,10 @@ export PATH=$PATH:$GOPATH/bin
 # Goland Jetbrain IDE
 export PATH=$PATH:Applications/GoLand.app/Contents/MacOS
 
+# Cert Zscaner
+export NODE_EXTRA_CA_CERTS=$HOME/.ssh/zscaler_cert.pem
+
+
 # FZF Style
 # Tmux FZF stile
 zstyle ':fzf-tab:*' fzf-command ftb-tmux-popup
@@ -189,16 +193,16 @@ fzf_change_directory() {
   done
 }
 
-# Aliases
-alias g="git"
-alias ll="eza -l -g --icons"
-alias lla="ll -a"
-alias llt="ll -T --level=2"
-alias llta="llt -a"
-alias cdz='cdznorm'
-alias vim='nvim'
-alias vi='nvim'
-alias gcl='gitlab-ci-local'
+# Aliases (functions for lazygit compatibility)
+g() { git "$@"; }
+ll() { eza -l -g --icons "$@"; }
+lla() { ll -a "$@"; }
+llt() { ll -T --level=2 "$@"; }
+llta() { llt -a "$@"; }
+cdz() { cdznorm "$@"; }
+vim() { nvim "$@"; }
+vi() { nvim "$@"; }
+gcl() { gitlab-ci-local "$@"; }
 
 
 # Bind Key

@@ -286,4 +286,78 @@ return {
       { "<leader>gc", "<cmd>ConventionalCommit<cr>", desc = "Conventional Commit" },
     },
   },
+
+  -- Diffget keymaps for merge conflict resolution (only active in diff mode)
+  {
+    "neovim/nvim-lspconfig",
+    optional = true,
+    init = function()
+      local function set_diffget_keymaps()
+        local buf = vim.api.nvim_get_current_buf()
+        if vim.wo.diff then
+          vim.keymap.set("n", "<leader>gl", "<cmd>diffget 1<cr>", { buffer = buf, desc = "Diffget LOCAL" })
+          vim.keymap.set("n", "<leader>gb", "<cmd>diffget 2<cr>", { buffer = buf, desc = "Diffget BASE" })
+          vim.keymap.set("n", "<leader>gr", "<cmd>diffget 3<cr>", { buffer = buf, desc = "Diffget REMOTE" })
+        end
+      end
+
+      -- When nvim starts in diff mode (git mergetool with -d flag)
+      vim.api.nvim_create_autocmd("VimEnter", {
+        callback = function()
+          set_diffget_keymaps()
+          if vim.wo.diff then
+            local git_dir = vim.fn.system("git rev-parse --git-dir 2>/dev/null"):gsub("\n", "")
+            local is_rebase = vim.fn.isdirectory(git_dir .. "/rebase-merge") == 1
+              or vim.fn.isdirectory(git_dir .. "/rebase-apply") == 1
+
+            local local_branch, remote_branch
+            if is_rebase then
+              local rebase_dir = vim.fn.isdirectory(git_dir .. "/rebase-merge") == 1
+                  and "rebase-merge"
+                or "rebase-apply"
+              local head_name = vim.fn.readfile(git_dir .. "/" .. rebase_dir .. "/head-name")[1] or ""
+              remote_branch = head_name:gsub("refs/heads/", "")
+              local onto_hash = (vim.fn.readfile(git_dir .. "/" .. rebase_dir .. "/onto")[1] or ""):gsub("\n", "")
+              -- Find local branch pointing at the onto commit
+              local_branch = vim.fn.system(
+                "git for-each-ref --points-at=" .. onto_hash .. " --format='%(refname:short)' refs/heads/ 2>/dev/null"
+              ):gsub("\n", "")
+              if local_branch == "" then
+                -- Fallback: find the closest branch name
+                local_branch = vim.fn.system(
+                  "git branch --contains " .. onto_hash .. " --format='%(refname:short)' 2>/dev/null"
+                ):gsub("\n.*", "")
+              end
+              if local_branch == "" then
+                local_branch = onto_hash:sub(1, 7)
+              end
+            else
+              local_branch = vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
+              remote_branch = vim.fn.system("git rev-parse --abbrev-ref MERGE_HEAD 2>/dev/null"):gsub("\n", "")
+              if vim.v.shell_error ~= 0 then
+                remote_branch = "unknown"
+              end
+            end
+
+            local labels = {
+              " LOCAL (" .. local_branch .. ")",
+              " BASE",
+              " REMOTE (" .. remote_branch .. ")",
+              " MERGED",
+            }
+            for i, win in ipairs(vim.api.nvim_list_wins()) do
+              if labels[i] then
+                vim.wo[win].winbar = labels[i]
+              end
+            end
+          end
+        end,
+      })
+      -- When diff mode is toggled on later
+      vim.api.nvim_create_autocmd("OptionSet", {
+        pattern = "diff",
+        callback = set_diffget_keymaps,
+      })
+    end,
+  },
 }
