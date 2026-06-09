@@ -8,6 +8,7 @@
 - [Fish config](#fish-setup)
 - [Neovim config](#neovim-setup)
 - [tmux config](#tmux-setup)
+- [tmux control](#tmux-control)
 - [Git config](#git-config)
 - [macOS defaults](#macos-defaults)
 - [Scripts](#scripts)
@@ -152,6 +153,79 @@ tmux configuration with Solarized theme and vi mode.
 ### IDE Layout Script
 
 `.scripts/ide` - Creates a tmux IDE-like layout with split panes.
+
+## tmux control
+
+Complete shortcut reference for controlling tmux. **Prefix is `Ctrl+t`** (rebound from default `Ctrl+b`).
+
+### Core / Session
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+t` | Prefix key |
+| `prefix + r` | Reload `tmux.conf` |
+| `prefix + o` | Open current pane's directory in Finder |
+| `prefix + e` | Kill all other panes in the current window |
+| `prefix + I` | Install plugins (TPM, first-time only) |
+| `prefix + d` | Detach from session |
+| `prefix + s` | List/switch sessions |
+
+### Popups (custom)
+
+| Shortcut | Action |
+|----------|--------|
+| `prefix + g` | Open **lazygit** in an 80%×80% popup at the pane's cwd |
+| `prefix + y` | Open **Claude Code** in an 80%×80% popup, attached to a per-directory `claude-<hash>` session |
+
+### Windows
+
+| Shortcut | Action |
+|----------|--------|
+| `prefix + c` | Create new window |
+| `prefix + ,` | Rename current window |
+| `prefix + n` / `p` | Next / previous window |
+| `prefix + 0`–`9` | Jump to window by number |
+| `prefix + w` | List windows |
+| `prefix + &` | Kill current window |
+| `Ctrl+Shift+Left` | Move current window left (swap + previous) |
+| `Ctrl+Shift+Right` | Move current window right (swap + next) |
+
+### Panes (via `tmux-pain-control`)
+
+| Shortcut | Action |
+|----------|--------|
+| `prefix + h` / `j` / `k` / `l` | Select pane left / down / up / right |
+| `prefix + H` / `J` / `K` / `L` | Resize pane in that direction |
+| `prefix + -` | Split window horizontally (new pane below) |
+| `prefix + \|` | Split window vertically (new pane right) |
+| `prefix + \\` | Split full-width horizontal |
+| `prefix + _` | Split full-height vertical |
+| `prefix + <` / `>` | Move window left / right in the list |
+| `prefix + x` | Kill current pane |
+| `prefix + z` | Toggle pane zoom (fullscreen) |
+| `prefix + {` / `}` | Swap pane with previous / next |
+| `prefix + Space` | Cycle through pane layouts |
+
+### Mouse & Copy (vi mode)
+
+- Mouse mode is **on** — click to select panes, drag borders to resize, scroll to enter copy mode.
+- Copy-mode uses **vi keys**.
+
+| Shortcut | Action |
+|----------|--------|
+| `prefix + [` | Enter copy mode |
+| `v` | Start selection (in copy mode) |
+| `y` | Yank selection to clipboard (in copy mode) |
+| `q` | Quit copy mode |
+| `prefix + ]` | Paste yanked text |
+
+On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land in the system clipboard.
+
+### Other settings worth knowing
+
+- History limit: 64,096 lines
+- Focus events enabled
+- Escape time: 10 ms
 
 ## Git config
 
