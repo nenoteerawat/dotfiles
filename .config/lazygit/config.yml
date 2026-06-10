@@ -5,5 +5,8 @@ customCommands:
     context: "files"
     loadingText: "opening commitizen commit tool"
     output: terminal
+keybinding:
+  universal:
+    openDiffTool: "<c-e>"
 gui:
   mouseEvents: false

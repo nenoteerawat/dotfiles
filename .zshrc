@@ -7,7 +7,7 @@ export PATH=$PATH:$GOPATH/bin
 export PATH=$PATH:Applications/GoLand.app/Contents/MacOS
 
 # Cert Zscaner
-export NODE_EXTRA_CA_CERTS=$HOME/.ssh/zscaler_cert.pem
+export NODE_EXTRA_CA_CERTS=$HOME/.ssh/gateway-ca-cloudflare.pem
 
 
 # FZF Style
@@ -31,7 +31,6 @@ zstyle ':fzf-tab:*' switch-group '<' '>'
 # ZSH Autocomplete & Autosuggestion & Syntx Highlighting &
 #source "$(brew --prefix)/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
 source "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
-source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 source "$(brew --prefix)/share/zsh-history-substring-search/zsh-history-substring-search.zsh"
 source $HOME/.zprofile
@@ -64,8 +63,6 @@ source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"
 source <(docker completion zsh)
 # Trivy CLI
 source <(trivy completion zsh)
-# Dagger CLI
-source <(dagger completion zsh)
 # Github CLI
 source <(gh completion -s zsh)
 # k3d CLI
