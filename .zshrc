@@ -45,30 +45,41 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$(brew --prefix)/opt/nvm/nvm.sh" ] && \. "$(brew --prefix)/opt/nvm/nvm.sh"  # This loads nvm
 [ -s "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm" ] && \. "$(brew --prefix)/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
 
-# ZSH Auto Complete
+# --- Completion system -------------------------------------------------------
+# fpath must contain every completion dir BEFORE compinit runs. compinit defines
+# `compdef`, which the tool-completion lines below call — so it must run FIRST,
+# not at the bottom of the file.
+if type brew &>/dev/null; then
+  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+fi
+[ -d "$HOME/.docker/completions" ] && fpath=("$HOME/.docker/completions" $fpath)
+autoload -Uz compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+
+# ZSH Auto Complete (each guarded so a missing tool is skipped, not an error)
 # Gitflow CLI
-source ~/.git-flow-completion.zsh
+[ -r ~/.git-flow-completion.zsh ] && source ~/.git-flow-completion.zsh
 # Anguler CLI
-source <(ng completion script)
+command -v ng >/dev/null 2>&1 && source <(ng completion script)
 # Atlas CLI
-source <(atlas completion zsh)
+command -v atlas >/dev/null 2>&1 && source <(atlas completion zsh)
 # Kubectl CLI
-source <(kubectl completion zsh)
+command -v kubectl >/dev/null 2>&1 && source <(kubectl completion zsh)
 # Helm CLI
-source <(helm completion zsh)
+command -v helm >/dev/null 2>&1 && source <(helm completion zsh)
 # Google Cloud SDK CLI (guarded: only if the SDK is actually installed)
 _gcloud_share="$(brew --prefix)/share/google-cloud-sdk"
 [ -r "$_gcloud_share/completion.zsh.inc" ] && source "$_gcloud_share/completion.zsh.inc"
 [ -r "$_gcloud_share/path.zsh.inc" ] && source "$_gcloud_share/path.zsh.inc"
 unset _gcloud_share
 # Docker CLI
-source <(docker completion zsh)
+command -v docker >/dev/null 2>&1 && source <(docker completion zsh)
 # Trivy CLI
-source <(trivy completion zsh)
+command -v trivy >/dev/null 2>&1 && source <(trivy completion zsh)
 # Github CLI
-source <(gh completion -s zsh)
+command -v gh >/dev/null 2>&1 && source <(gh completion -s zsh)
 # k3d CLI
-source <(k3d completion zsh)
+command -v k3d >/dev/null 2>&1 && source <(k3d completion zsh)
 # Setup Nix-Shell (guarded: only if Nix is installed)
 if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
   source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
@@ -215,22 +226,13 @@ fzf_change_directory-widget() { zle -I; fzf_change_directory; zle reset-prompt }
 zle -N fzf_change_directory-widget
 bindkey '^F' fzf_change_directory-widget
 
-if type brew &>/dev/null
-then
-  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
-fi
-
 # Config starship (must be last)
 eval "$(starship init zsh)"
 
 # FZF-TAB Auto Complete
 source ~/.ghq/github.com/Aloxaf/fzf-tab/fzf-tab.plugin.zsh
 
-autoload -U +X bashcompinit && bashcompinit
-complete -o nospace -C /opt/homebrew/bin/terraform terraform
-complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
-complete -o nospace -C /opt/homebrew/bin/vault vault
-
-# Docker CLI completions fpath (moved here so single compinit picks them up)
-fpath=(/Users/nenoteerawat/.docker/completions $fpath)
-autoload -Uz compinit && compinit
+# Terraform / Terragrunt / Vault completions (bashcompinit was initialized above)
+[ -x /opt/homebrew/bin/terraform ]  && complete -o nospace -C /opt/homebrew/bin/terraform terraform
+[ -x /opt/homebrew/bin/terragrunt ] && complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
+[ -x /opt/homebrew/bin/vault ]      && complete -o nospace -C /opt/homebrew/bin/vault vault
