@@ -6,8 +6,8 @@ export PATH=$PATH:$GOPATH/bin
 # Goland Jetbrain IDE
 export PATH=$PATH:Applications/GoLand.app/Contents/MacOS
 
-# Cert Cloudflare
-export NODE_EXTRA_CA_CERTS=$HOME/.ssh/gateway-ca-cloudflare.pem
+# Cert Cloudflare (only export when present, else node/npm warn on every run)
+[ -r "$HOME/.ssh/gateway-ca-cloudflare.pem" ] && export NODE_EXTRA_CA_CERTS="$HOME/.ssh/gateway-ca-cloudflare.pem"
 
 
 # FZF Style
