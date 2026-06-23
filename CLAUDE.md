@@ -53,7 +53,7 @@ Keep personal customizations (custom `.zshrc` functions, `.gitconfig` aliases, g
 
 ### Top-level files map directly into `$HOME`
 
-- `.zshrc` — primary shell config. Sources `zsh-autosuggestions`, `zsh-syntax-highlighting`, and `zsh-history-substring-search` from Homebrew (`$(brew --prefix)/share/...`); loads fzf keybindings via `source <(fzf --zsh)`; and registers many `source <(<tool> completion zsh)` lines. `NODE_EXTRA_CA_CERTS` points at `~/.ssh/gateway-ca-cloudflare.pem` (the Cloudflare gateway cert — migrated from the old Zscaler cert). Order matters: `compinit` is intentionally run **once** at the bottom after all `fpath` entries (including Docker completions) are set. Note `fzf-tab` is **not** a Homebrew tool — it is sourced from a local ghq clone (`~/.ghq/github.com/Aloxaf/fzf-tab/...`) near the very end, after `starship init`.
+- `.zshrc` — primary shell config. Sources `zsh-autosuggestions`, `zsh-syntax-highlighting`, and `zsh-history-substring-search` from Homebrew (`$(brew --prefix)/share/...`); loads fzf keybindings via `source <(fzf --zsh)`; and registers many `source <(<tool> completion zsh)` lines. `NODE_EXTRA_CA_CERTS` points at `~/.ssh/gateway-ca-cloudflare.pem` (the Cloudflare gateway cert — migrated from the old Zscaler cert). Order matters: `compinit` (and `bashcompinit`) run **once, early** — right after the `fpath` entries (brew `site-functions` + Docker completions) are set, but **before** the `source <(<tool> completion zsh)` lines — so `compdef` is defined before any completion registers itself. Each tool-completion line is guarded with `command -v <tool>` so an uninstalled tool is skipped, not an error. Note `fzf-tab` is **not** a Homebrew tool — it is sourced from a local ghq clone (`~/.ghq/github.com/Aloxaf/fzf-tab/...`) near the very end, after `starship init` (which is correct: fzf-tab must load after `compinit`).
 - `.gitconfig` — includes a `[url "git@github.com:pttep-pcl/"] insteadOf` rewrite that silently switches HTTPS clones of `pttep-pcl/*` repos to SSH. Keep this in mind when debugging clone behavior.
 - `.macos` — large script of `defaults write` commands for system preferences (Asia/Bangkok timezone, Dock, Finder, Safari, etc.).
 - `update_sudo_tid.sh` — idempotent (guards on `pam_tid.so` already being present), but it **overwrites** `/etc/pam.d/sudo_local` with `>` (clobbering any existing content) rather than appending, and hardcodes the **Apple-Silicon** Homebrew path `/opt/homebrew/lib/pam/pam_reattach.so` (Intel would need `/usr/local`). Writes `pam_reattach` + `pam_tid` lines so TouchID works inside tmux.
@@ -88,9 +88,12 @@ These are not in upstream and should survive merges:
 1. Homebrew shellenv → PATH for everything else.
 2. Plugin sources (autosuggest, syntax-highlight, history-substring).
 3. `fzf --zsh` keybindings.
-4. NVM, mise, tool completions via `source <(... completion zsh)`.
-5. Custom functions and `bindkey` lines.
-6. `starship init zsh` — must stay near the end.
-7. `fzf-tab` plugin source.
-8. Terraform/Terragrunt/Vault `complete -C` lines via `bashcompinit`.
-9. Final `compinit`. Adding new completions above this line is fine; running `compinit` earlier will break Docker completions and the `bashcompinit`-backed ones.
+4. NVM.
+5. **Completion system:** set `fpath` (brew `site-functions` + `~/.docker/completions`), then `compinit`, then `bashcompinit`. This must come **before** anything that calls `compdef`.
+6. Tool completions via `source <(<tool> completion zsh)` — each guarded with `command -v <tool>`; plus the gitlab-ci-local `compdef` block. (These rely on step 5 having defined `compdef`.)
+7. mise activate, custom functions, and `bindkey` lines.
+8. `starship init zsh` — must stay near the end.
+9. `fzf-tab` plugin source (correctly after `compinit`).
+10. Terraform/Terragrunt/Vault `complete -C` lines (use the `bashcompinit` from step 5; guarded with `[ -x ... ]`).
+
+When adding a new `source <(tool completion zsh)` line, put it in step 6 (after `compinit`) and guard it — never before step 5, or `compdef` won't exist yet.
