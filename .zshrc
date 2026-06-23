@@ -56,9 +56,11 @@ source <(atlas completion zsh)
 source <(kubectl completion zsh)
 # Helm CLI
 source <(helm completion zsh)
-# Google Cloud SDK CLI
-source "$(brew --prefix)/share/google-cloud-sdk/completion.zsh.inc"
-source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"
+# Google Cloud SDK CLI (guarded: only if the SDK is actually installed)
+_gcloud_share="$(brew --prefix)/share/google-cloud-sdk"
+[ -r "$_gcloud_share/completion.zsh.inc" ] && source "$_gcloud_share/completion.zsh.inc"
+[ -r "$_gcloud_share/path.zsh.inc" ] && source "$_gcloud_share/path.zsh.inc"
+unset _gcloud_share
 # Docker CLI
 source <(docker completion zsh)
 # Trivy CLI
@@ -67,11 +69,14 @@ source <(trivy completion zsh)
 source <(gh completion -s zsh)
 # k3d CLI
 source <(k3d completion zsh)
-# Setup Nix-Shell
-source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh 2>/dev/null || \
-source /nix/var/nix/profiles/default/etc/profile.d/nix.sh
-# Setup DevBox Gobal
-eval "$(devbox global shellenv --init-hook)"
+# Setup Nix-Shell (guarded: only if Nix is installed)
+if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+  source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+elif [ -e /nix/var/nix/profiles/default/etc/profile.d/nix.sh ]; then
+  source /nix/var/nix/profiles/default/etc/profile.d/nix.sh
+fi
+# Setup DevBox Global (guarded: only if devbox is installed)
+command -v devbox >/dev/null 2>&1 && eval "$(devbox global shellenv --init-hook)"
 #compdef gitlab-ci-local
 ###-begin-gitlab-ci-local-completions-###
 #
