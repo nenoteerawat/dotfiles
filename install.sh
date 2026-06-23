@@ -146,7 +146,10 @@ if [ "$MINIMAL" = 1 ]; then
   step "Recommended dev CLIs"; skip "--minimal: skipping kubectl/helm/gh/terraform/… (their completion lines will print harmless 'command not found' on shell start)"
 else
   step "Recommended dev CLIs"
-  brewf kubernetes-cli helm gh trivy k3d terraform terragrunt vault hub peco
+  # terraform & vault are no longer in homebrew-core (HashiCorp BSL relicense) —
+  # they live in hashicorp/tap. brewf taps it automatically via the full path.
+  brewf kubernetes-cli helm gh trivy k3d terragrunt hub peco \
+        hashicorp/tap/terraform hashicorp/tap/vault
 fi
 
 # Optional dev extras
