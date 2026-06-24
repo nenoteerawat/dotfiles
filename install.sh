@@ -194,7 +194,7 @@ else mkdir -p "$(dirname "$TPM")"; git clone --depth 1 https://github.com/tmux-p
 # --------------------------------------------------------------------------- #
 step "Linking authored config files (per-file; tool-generated files stay out of the repo)"
 
-HOME_FILES=(.zshrc .gitconfig .czrc update_sudo_tid.sh .ssh/config)
+HOME_FILES=(.zshrc .gitconfig .czrc update_sudo_tid.sh .ssh/config .claude/statusline.sh)
 CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty .scripts)
 
 link_one() { # link_one <repo-relative-path>  ->  ~/<same-path>

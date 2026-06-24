@@ -75,6 +75,13 @@ Keep personal customizations (custom `.zshrc` functions, `.gitconfig` aliases, g
 
 - `ide` — run inside an existing tmux window to create a 5-pane IDE layout (left editor pane + right column split). Not on `$PATH` by default; invoke with `~/.scripts/ide`.
 
+### Claude Code status line (`.claude/statusline.sh`)
+
+- `.claude/statusline.sh` — the Claude Code status line ("Beacon"). It's the **only** tracked file under `.claude/`: `.gitignore` ignores all local Claude state with `.claude/*` and re-includes just this one with `!.claude/statusline.sh` (same idiom as the `.ssh/*` + `!.ssh/config` block). `install.sh` links it via `HOME_FILES` → `~/.claude/statusline.sh`.
+- **Activation is per-machine and NOT tracked.** The script only renders once `~/.claude/settings.json` has a `statusLine` block (`{"type":"command","command":"~/.claude/statusline.sh","padding":0}`). `settings.json` is intentionally untracked (machine-local), so on a fresh machine `install.sh` symlinks the script but you must add that `statusLine` block to `~/.claude/settings.json` by hand.
+- **Design:** flat, foreground-only truecolor on the inherited (translucent) background — matches the tmux `bg=default` + nvim `transparent` "Clear Dark" philosophy; **no** background fills or powerline glyphs. Reads the status JSON on stdin via `jq` (hard dependency; degrades to a plain `Claude` if absent). Deliberately shows only what starship/tmux **don't**: model name (the one bright-blue accent), ghq-shortened `<org>/<repo>` cwd, branch + dirty `*` + ahead/behind, a yellow **work** badge for pttep repos (remote `github.com-pttep`/`pttep-pcl`/`pttep-fusionsol` or the org path segment), live context-window `%` (escalates yellow≥70→red≥90), session `$cost`, and lines `+/-`.
+- **Performance gotcha:** Claude Code runs this on every render (debounced 300ms, in-flight runs cancelled), so it uses git **plumbing only** (`rev-parse`, one `rev-list` for ahead/behind, `--no-optional-locks status --porcelain`) and never the network. Keep it fast if you extend it. Test with `echo '{...}' | ~/.claude/statusline.sh`.
+
 ### Personal `.zshrc` helpers worth preserving
 
 These are not in upstream and should survive merges:
