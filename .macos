@@ -582,6 +582,17 @@ defaults write com.apple.mail SpellCheckingBehavior -string "NoSpellCheckingEnab
 # Spotlight                                                                   #
 ###############################################################################
 
+# Keep Spotlight on ⌘ Space so Alfred can take ⌥ Space.
+# Pin "Show Spotlight search" (symbolic hotkey 64) to ⌘ Space and enable it, so a
+# machine where another launcher previously grabbed ⌘ Space gets Spotlight back.
+#   32 = space char, 49 = space key code, 1048576 = ⌘ (Command), type standard.
+# NOTE: Alfred's own hotkey (⌥ Space) is GUI-only — set it in
+#       Alfred Settings → General → Hotkey. It cannot be reliably scripted here.
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 64 \
+	"{ enabled = 1; value = { parameters = ( 32, 49, 1048576 ); type = standard; }; }"
+# Apply symbolic-hotkey changes without requiring a logout.
+"/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings" -u
+
 # Hide Spotlight tray-icon (and subsequent helper)
 #sudo chmod 600 /System/Library/CoreServices/Search.bundle/Contents/MacOS/Search
 # Disable Spotlight indexing for any volume that gets mounted and has not yet
