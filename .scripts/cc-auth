@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# cc-auth [work|personal|status|strip-global] [project-dir]
+#
+# Option-B per-project Claude Code auth switch. Confines the work API
+# credentials (key + AWS external-Anthropic gateway base URL + workspace
+# header) to a SINGLE repo's .claude/settings.local.json, so only that repo
+# talks to the work gateway; every other repo falls back to your Claude.ai
+# subscription (the global default).
+#
+#   work          stamp the work env block into <dir>/.claude/settings.local.json
+#   personal      strip the work env keys from that file (-> subscription default)
+#   status        report what <dir> and the global settings currently use
+#   strip-global  one-time: remove the work env block from ~/.claude/settings.local.json
+#                 (backs up to *.bak first) so personal becomes the global default
+#
+# The secret lives ONLY in ~/.claude/work-auth.json (chmod 600, never committed):
+# a JSON object holding exactly the work `env` entries. This script copies it
+# into the per-repo settings.local.json and keeps that file out of git via the
+# repo's LOCAL .git/info/exclude (it never edits the tracked .gitignore). Which
+# keys count as "work" is read from work-auth.json, so the block can grow/shrink
+# without editing this script.
+#
+# <project-dir> defaults to the git toplevel of the current directory (else cwd).
+set -u
+
+secret="$HOME/.claude/work-auth.json"
+global="$HOME/.claude/settings.local.json"
+
+die() { printf 'cc-auth: %s\n' "$*" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || die "jq is required"
+
+cmd="${1:-status}"
+
+# resolve project dir: explicit arg, else git toplevel, else cwd
+dir="${2:-}"
+if [[ -z "$dir" ]]; then
+  dir="$(git rev-parse --show-toplevel 2>/dev/null)"
+  [[ -n "$dir" ]] || dir="$PWD"
+fi
+[[ -d "$dir" ]] || die "not a directory: $dir"
+settings="$dir/.claude/settings.local.json"
+
+require_secret() {
+  [[ -f "$secret" ]] || die "missing $secret — a chmod 600 JSON object of the work env block"
+  jq -e 'type=="object"' "$secret" >/dev/null 2>&1 || die "$secret must be a JSON object"
+}
+
+# keep a per-repo settings.local.json out of git via the LOCAL exclude only
+ensure_excluded() {
+  local top
+  top="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  git -C "$dir" check-ignore -q .claude/settings.local.json 2>/dev/null && return 0
+  local ex="$top/.git/info/exclude"
+  grep -qxF '.claude/settings.local.json' "$ex" 2>/dev/null \
+    || printf '%s\n' '.claude/settings.local.json' >> "$ex"
+}
+
+# write stdin JSON to $1, atomically + chmod 600; delete the file if it is just {}
+write_json() {
+  local target="$1" tmp="$1.tmp.$$"
+  mkdir -p "$(dirname "$target")"
+  cat > "$tmp" || die "write failed: $target"
+  if [[ "$(jq -c . "$tmp" 2>/dev/null)" == "{}" ]]; then
+    rm -f "$tmp" "$target"
+    echo "removed $target (now empty)"
+    return 0
+  fi
+  chmod 600 "$tmp"
+  mv "$tmp" "$target"
+  chmod 600 "$target"
+}
+
+read_or_empty() { [[ -f "$1" ]] && cat "$1" || printf '{}'; }
+
+# does file $1 carry the work keys?  mode all|any
+has_work_keys() {  # $1=file  $2=all|any
+  [[ -f "$1" && -f "$secret" ]] || return 1
+  jq -e --slurpfile w "$secret" \
+    "(.env // {}) as \$e | (\$w[0]|keys) as \$ks | $2(\$ks[]; \$e[.] != null)" \
+    "$1" >/dev/null 2>&1
+}
+
+case "$cmd" in
+  work)
+    require_secret
+    if jq -e '[.[] | strings | select(test("REPLACE"))] | length > 0' "$secret" >/dev/null 2>&1; then
+      die "$secret still has REPLACE placeholders — fill in the real work key/workspace id first"
+    fi
+    read_or_empty "$settings" \
+      | jq --slurpfile w "$secret" '.env = ((.env // {}) + $w[0])' \
+      | write_json "$settings"
+    ensure_excluded
+    echo "cc-auth work → $settings (this repo uses the work gateway)"
+    ;;
+
+  personal)
+    require_secret
+    read_or_empty "$settings" \
+      | jq --slurpfile w "$secret" '
+          ($w[0]|keys) as $ks
+          | .env = ((.env // {}) | delpaths($ks | map([.])))
+          | if (.env | length) == 0 then del(.env) else . end' \
+      | write_json "$settings"
+    echo "cc-auth personal → $dir uses the Claude.ai subscription default"
+    ;;
+
+  strip-global)
+    require_secret
+    [[ -f "$global" ]] || { echo "no $global — subscription is already the global default"; exit 0; }
+    cp "$global" "$global.bak" && chmod 600 "$global.bak"
+    read_or_empty "$global" \
+      | jq --slurpfile w "$secret" '
+          ($w[0]|keys) as $ks
+          | .env = ((.env // {}) | delpaths($ks | map([.])))
+          | if (.env | length) == 0 then del(.env) else . end' \
+      | write_json "$global"
+    echo "stripped work creds from global (backup: $global.bak) → subscription is now the global default"
+    echo "reminder: run '/login' once in Claude Code to ensure a personal subscription session exists"
+    ;;
+
+  status)
+    echo "project: $dir"
+    if [[ -f "$settings" ]]; then
+      if has_work_keys "$settings" all; then
+        echo "  $settings → work (gateway creds present)"
+      else
+        echo "  $settings → personal/other (no work creds)"
+      fi
+    else
+      echo "  no .claude/settings.local.json → subscription default"
+    fi
+    if has_work_keys "$global" any; then
+      echo "  ⚠ global $global still has work creds → forces work everywhere"
+      echo "    run: ~/.scripts/cc-auth strip-global"
+    else
+      echo "  global default: Claude.ai subscription"
+    fi
+    [[ -f "$secret" ]] || echo "  (no $secret yet — 'work' needs it)"
+    ;;
+
+  -h|--help)
+    sed -n '2,30p' "$0"
+    ;;
+
+  *)
+    echo "usage: cc-auth [work|personal|status|strip-global] [project-dir]" >&2
+    exit 2
+    ;;
+esac

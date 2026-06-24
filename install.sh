@@ -255,6 +255,30 @@ CREDEOF
 fi
 
 # --------------------------------------------------------------------------- #
+# 7c. Claude Code per-repo work credentials (cc-auth, "Option B" auth switch)
+#     A chmod-600 JSON object of the work `env` block (key + AWS external-
+#     Anthropic gateway base URL + workspace header). `cc-auth work` copies it
+#     into a work repo's .claude/settings.local.json so only that repo uses the
+#     gateway; everything else falls back to the Claude.ai subscription. NEVER
+#     committed; lives in $HOME. See CLAUDE.md (.scripts -> cc-auth).
+# --------------------------------------------------------------------------- #
+step "Claude Code per-repo work credentials (cc-auth template)"
+WORKAUTH="$HOME/.claude/work-auth.json"
+if [ -e "$WORKAUTH" ]; then ok "cc-auth work credentials present ($WORKAUTH)"
+else
+  ( umask 077; cat > "$WORKAUTH" <<'WAEOF'
+{
+  "ANTHROPIC_API_KEY": "REPLACE-with-work-api-key",
+  "ANTHROPIC_BASE_URL": "https://aws-external-anthropic.us-east-1.api.aws",
+  "ANTHROPIC_CUSTOM_HEADERS": "anthropic-workspace-id: REPLACE-with-wrkspc-id"
+}
+WAEOF
+  )
+  chmod 600 "$WORKAUTH"
+  warn "seeded $WORKAUTH (chmod 600) — fill in the real work key/workspace id, then 'cc-auth work' inside a work repo"
+fi
+
+# --------------------------------------------------------------------------- #
 # 8. mise runtimes (bun, ghq, node, python, ruby, rust)
 # --------------------------------------------------------------------------- #
 step "mise runtimes"
