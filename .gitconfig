@@ -56,10 +56,18 @@
 	process = git-lfs filter-process
 [ghq]
   root = ~/.ghq
-[maintenance]
-	repo = /Users/nenoteerawat/.ghq/platform-engineering
-	repo = /Users/nenoteerawat/.ghq/git@github.com:pttep-pcl/platform-engineering
-	repo = /Users/nenoteerawat/.ghq/github.com/pttep-pcl/platform-engineering
-	repo = /Users/nenoteerawat/.ghq/github.com/pttep-pcl/test-sparo-clone/platform-engineering
-[url "git@github.com:pttep-pcl/"]
+# Route pttep work orgs to the work-account SSH host alias (github.com-pttep -> pttep_gh_id).
+# All three URL spellings are rewritten so `ghq get` works with any of them while keeping
+# the clean ~/.ghq/github.com/<org>/<repo> layout (ghq derives the path from the original
+# URL, before git applies these rewrites):
+#   - https://github.com/<org>/         -> HTTPS form and the `ghq get <org>/<repo>` shorthand
+#   - git@github.com:<org>/             -> scp-style form for a direct `git clone`
+#   - ssh://git@github.com/<org>/       -> the form ghq normalizes scp-style URLs into
+[url "git@github.com-pttep:pttep-pcl/"]
 	insteadOf = https://github.com/pttep-pcl/
+	insteadOf = git@github.com:pttep-pcl/
+	insteadOf = ssh://git@github.com/pttep-pcl/
+[url "git@github.com-pttep:pttep-fusionsol/"]
+	insteadOf = https://github.com/pttep-fusionsol/
+	insteadOf = git@github.com:pttep-fusionsol/
+	insteadOf = ssh://git@github.com/pttep-fusionsol/

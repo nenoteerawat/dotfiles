@@ -82,3 +82,7 @@ Pods/
 # Jetbrain tools
 .idea
 .claude
+
+# SSH — track ONLY the config; never private keys, known_hosts, or certs
+.ssh/*
+!.ssh/config
