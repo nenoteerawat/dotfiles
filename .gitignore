@@ -76,10 +76,12 @@ Pods/
 .config/zed/embeddings
 .config/zed/prompts
 
-# Claude Code — ignore all local state; track ONLY the statusline script
-# (same idiom as the .ssh block below: ignore the dir, re-include one file)
+# Claude Code — ignore all local state; track only the statusline script and
+# settings.json (same idiom as the .ssh block below: ignore the dir, re-include).
+# Machine-local overrides go in .claude/settings.local.json, which stays ignored.
 .claude/*
 !.claude/statusline.sh
+!.claude/settings.json
 
 # Jetbrain tools
 .idea
