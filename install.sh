@@ -14,7 +14,7 @@
 #
 # Tiers (default = CORE + RECOMMENDED + NPM + CASKS + links + missing-file fixes):
 #   --minimal       Only what zsh needs to load cleanly with all functions.
-#   --no-casks      Skip GUI casks (ghostty + Nerd Font).
+#   --no-casks      Skip GUI casks (ghostty + Nerd Fonts).
 #   --no-chsh       Don't set zsh as the login shell.
 #   --dev-extras    Also install atlas (ariga tap) + @angular/cli.
 #   --with-cloud    Install the google-cloud-sdk cask (fixes the unguarded
@@ -162,10 +162,10 @@ fi
 # 4. GUI casks (terminal + font)
 # --------------------------------------------------------------------------- #
 if [ "$CASKS" = 1 ]; then
-  step "Casks (terminal + Nerd Font)"
-  brewc ghostty font-plemol-jp-nf
+  step "Casks (terminal + Nerd Fonts)"
+  brewc ghostty font-plemol-jp-nf font-hack-nerd-font
 else
-  step "Casks"; skip "skipped (--no-casks / --minimal). ghostty + font-plemol-jp-nf not installed."
+  step "Casks"; skip "skipped (--no-casks / --minimal). ghostty + font-plemol-jp-nf + font-hack-nerd-font not installed."
 fi
 [ "$WITH_CLOUD" = 1 ]  && { step "Google Cloud SDK"; brewc google-cloud-sdk; }
 [ "$WITH_DOCKER" = 1 ] && { step "Docker Desktop"; brewc docker-desktop; }
@@ -194,7 +194,7 @@ else mkdir -p "$(dirname "$TPM")"; git clone --depth 1 https://github.com/tmux-p
 # --------------------------------------------------------------------------- #
 step "Linking authored config files (per-file; tool-generated files stay out of the repo)"
 
-HOME_FILES=(.zshrc .gitconfig .czrc update_sudo_tid.sh)
+HOME_FILES=(.zshrc .gitconfig .czrc update_sudo_tid.sh .ssh/config)
 CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty .scripts)
 
 link_one() { # link_one <repo-relative-path>  ->  ~/<same-path>
