@@ -129,4 +129,48 @@ if (( added > 0 || removed > 0 )); then
   (( removed > 0 )) && out+="${C_RED}-${removed}${R}"
 fi
 
+# --- org API spend (work account only; month-to-date vs budget) ---
+# This NEVER reads the Admin key — only a non-secret JSON cache written by
+# ~/.scripts/cc-credits-refresh, which is spawned in the background when stale.
+# Active account: explicit override file, else by repo (work badge => work).
+acct_state=$(cat "$HOME/.claude/statusline-account" 2>/dev/null)
+case "${acct_state:-auto}" in
+  work)     active_acct="work" ;;
+  personal) active_acct="personal" ;;
+  *)        [[ -n "$badge" ]] && active_acct="work" || active_acct="personal" ;;
+esac
+# Only the work (org) account has a Cost API; personal is individual -> skip.
+if [[ "$active_acct" == "work" ]]; then
+  cred_cache="$HOME/.claude/cache/credits-work.json"
+  refresher="$HOME/.scripts/cc-credits-refresh"
+  # spawn a detached background refresh if the cache is missing or > 10 min old
+  cred_fa=0
+  if [[ -f "$cred_cache" ]]; then
+    cred_fa=$(jq -r '.fetched_at // 0' "$cred_cache" 2>/dev/null); cred_fa=${cred_fa%.*}
+    [[ "$cred_fa" =~ ^[0-9]+$ ]] || cred_fa=0
+  fi
+  if (( $(date +%s) - cred_fa > 600 )) && [[ -x "$refresher" ]]; then
+    # detached + SIGHUP-immune so the fetch outlives this fast statusline run
+    ( nohup "$refresher" work >/dev/null 2>&1 & ) </dev/null >/dev/null 2>&1
+  fi
+  if [[ -f "$cred_cache" ]]; then
+    cred_st=$(jq -r '.status // "none"' "$cred_cache" 2>/dev/null)
+    case "$cred_st" in
+      ok)
+        cred_pct=$(jq -r '.pct // 0'    "$cred_cache" 2>/dev/null); cred_pct=${cred_pct%.*}
+        cred_spent=$(jq -r '.spent // 0' "$cred_cache" 2>/dev/null); cred_spent=${cred_spent%.*}
+        cred_budget=$(jq -r '.budget // 0' "$cred_cache" 2>/dev/null); cred_budget=${cred_budget%.*}
+        [[ "$cred_pct" =~ ^[0-9]+$ ]] || cred_pct=0
+        ac="$C_FG"; (( cred_pct >= 70 )) && ac="$C_YEL"; (( cred_pct >= 90 )) && ac="$C_BRED"
+        out+="${SEP}${C_DIM}acct ${R}${ac}${cred_pct}%${R}${C_DIM} \$${cred_spent}/\$${cred_budget}${R}"
+        ;;
+      no_key) out+="${SEP}${C_DIM}acct ⚠${R}" ;;   # set an Admin key in statusline-credits.env
+      error)  out+="${SEP}${C_DIM}acct ✗${R}" ;;
+      *)      out+="${SEP}${C_DIM}acct …${R}" ;;    # fetching
+    esac
+  else
+    out+="${SEP}${C_DIM}acct …${R}"
+  fi
+fi
+
 printf '%b\n' "$out"

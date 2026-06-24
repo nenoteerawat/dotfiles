@@ -232,6 +232,29 @@ for f in "$HOME/.zprofile" "$HOME/.git-flow-completion.zsh"; do
 done
 
 # --------------------------------------------------------------------------- #
+# 7b. Claude Code status line — API-spend credits
+#     cache dir + a chmod-600 credential template (NEVER committed; lives in
+#     $HOME). The "acct" segment needs an Admin API key (sk-ant-admin01-…);
+#     a regular sk-ant-api… key is rejected by the Cost API. See CLAUDE.md.
+# --------------------------------------------------------------------------- #
+step "Claude Code status line credits (cache dir + credential template)"
+mkdir -p "$HOME/.claude/cache"
+CRED="$HOME/.claude/statusline-credits.env"
+if [ -e "$CRED" ]; then ok "credential file present ($CRED)"
+else
+  ( umask 077; cat > "$CRED" <<'CREDEOF'
+# Claude Code status line — API spend credentials. NEVER commit this file.
+# Cost/usage needs an ADMIN key (sk-ant-admin01-...): Console -> Settings ->
+# API keys -> Admin keys (org admin role). A regular sk-ant-api... key is rejected.
+WORK_ADMIN_KEY="REPLACE-with-sk-ant-admin01-..."
+WORK_MONTHLY_BUDGET="500"
+CREDEOF
+  )
+  chmod 600 "$CRED"
+  warn "seeded $CRED (chmod 600) — add your Admin key to enable the 'acct' spend segment"
+fi
+
+# --------------------------------------------------------------------------- #
 # 8. mise runtimes (bun, ghq, node, python, ruby, rust)
 # --------------------------------------------------------------------------- #
 step "mise runtimes"
