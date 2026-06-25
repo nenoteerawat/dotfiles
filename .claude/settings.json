@@ -1,10 +1,4 @@
 {
-  "effortLevel": "xhigh",
-  "skipWorkflowUsageWarning": true,
-  "theme": "dark",
-  "enabledPlugins": {
-    "lua-lsp@claude-plugins-official": true
-  },
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -55,5 +49,19 @@
     "type": "command",
     "command": "~/.claude/statusline.sh",
     "padding": 0
+  },
+  "enabledPlugins": {
+    "lua-lsp@claude-plugins-official": true
+  },
+  "effortLevel": "ultracode",
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark",
+  "extraKnownMarketplaces": {
+    "karpathy-skills": {
+      "source": {
+        "source": "github",
+        "repo": "forrestchang/andrej-karpathy-skills"
+      }
+    }
   }
 }
