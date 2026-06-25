@@ -195,7 +195,13 @@ else mkdir -p "$(dirname "$TPM")"; git clone --depth 1 https://github.com/tmux-p
 step "Linking authored config files (per-file; tool-generated files stay out of the repo)"
 
 HOME_FILES=(.zshrc .gitconfig .czrc update_sudo_tid.sh .ssh/config .claude/statusline.sh .claude/settings.json)
-CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty .scripts)
+CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty)
+# Whole-directory symlinks: ~/X -> repo/X. Only for dirs with NO tool-generated
+# files (unlike .config/* which gets Mason/lazy-lock/plugins written into it), so
+# a whole-dir symlink is safe AND new authored files appear without re-running
+# install.sh. .scripts is also on $PATH (see .zshrc), so cc-auth/cc-acct/ide are
+# bare commands from any repo.
+HOME_DIRS=(.scripts)
 
 link_one() { # link_one <repo-relative-path>  ->  ~/<same-path>
   local rel="$1" src="$REPO/$1" dst="$HOME/$1"
@@ -213,6 +219,7 @@ ensure_real_dir() { # migrate a legacy whole-dir symlink back to a real director
 }
 
 for f in "${HOME_FILES[@]}"; do link_one "$f"; done
+for d in "${HOME_DIRS[@]}"; do link_one "$d"; done   # whole-dir symlink (migrates a legacy real dir to .bak)
 for d in "${CONFIG_DIRS[@]}"; do
   ensure_real_dir "$d"
   n=0

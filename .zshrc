@@ -1,4 +1,8 @@
 eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Personal scripts (cc-auth, cc-acct, ide, …) — invoke by bare name from any repo
+export PATH="$HOME/.scripts:$PATH"
+
 # Golang PATH
 export GOPATH=$HOME/.go
 export PATH=$PATH:$GOPATH/bin
