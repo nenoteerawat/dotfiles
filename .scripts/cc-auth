@@ -20,6 +20,14 @@
 # keys count as "work" is read from work-auth.json, so the block can grow/shrink
 # without editing this script.
 #
+# Heads-up: starting Claude Code in a work repo prints
+#   "Both claude.ai and ANTHROPIC_API_KEY set · auth may not work as expected".
+# That is EXPECTED and harmless. Claude Code credential precedence puts
+# ANTHROPIC_API_KEY (#3) ABOVE the subscription OAuth (#6), so the key wins and
+# the gateway call uses it (the subscription can't reach a custom base URL
+# anyway). Approve the key once when prompted to make it deliberate; check with
+# /status. Do NOT /logout — that clears the subscription in every other repo.
+#
 # <project-dir> defaults to the git toplevel of the current directory (else cwd).
 set -u
 
@@ -91,6 +99,8 @@ case "$cmd" in
       | write_json "$settings"
     ensure_excluded
     echo "cc-auth work → $settings (this repo uses the work gateway)"
+    echo "  • start a NEW Claude Code session for it to take effect (auth is read at startup)"
+    echo "  • the 'Both claude.ai and ANTHROPIC_API_KEY set' warning is EXPECTED — the key wins by precedence; approve it once when prompted, confirm with /status"
     ;;
 
   personal)
