@@ -13,10 +13,11 @@
 - [macOS defaults](#macos-defaults)
 - [Scripts](#scripts)
 - [Local AI coding implementor](#local-ai-coding-implementor) (Claude designs, local model implements)
+- [Claude Code](#claude-code)
 
 ## Neovim setup
 
-Neovim configuration based on [LazyVim](https://www.lazyvim.org/) with [Solarized Osaka](https://github.com/craftzdog/solarized-osaka.nvim) theme (transparent).
+Neovim configuration based on [LazyVim](https://www.lazyvim.org/) with the [tokyonight](https://github.com/folke/tokyonight.nvim) theme (style `night`, remapped to the macOS Terminal "Clear Dark" palette, transparent).
 
 ### Requirements
 
@@ -39,7 +40,7 @@ Neovim configuration based on [LazyVim](https://www.lazyvim.org/) with [Solarize
 
 | Plugin | Description |
 |--------|-------------|
-| [Solarized Osaka](https://github.com/craftzdog/solarized-osaka.nvim) | Colorscheme (transparent) |
+| [tokyonight](https://github.com/folke/tokyonight.nvim) | Colorscheme (style `night`, remapped to Terminal "Clear Dark", transparent) |
 | [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) | Fuzzy finder with fzf-native and file-browser |
 | [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | Syntax highlighting (Go, Rust, TypeScript, CSS, Fish, SQL, and more) |
 | [blink.cmp](https://github.com/saghen/blink.cmp) | Completion engine |
@@ -87,7 +88,6 @@ Primary shell configuration in `.zshrc` using Zsh with [Starship](https://starsh
 - [Neovim](https://neovim.io/) - Editor (aliased as `vim` and `vi`)
 - [NVM](https://github.com/nvm-sh/nvm) - Node version manager
 - [mise](https://mise.jdx.dev/) - Runtime manager
-- [Nix](https://nixos.org/) / [DevBox](https://www.jetify.com/devbox) - Reproducible dev environments
 - [sparo](https://tiktok.github.io/sparo/) - Sparse Git checkout
 
 ### CLI Completions
@@ -260,18 +260,13 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 
 ## macOS defaults
 
-`.macos` script configures macOS system preferences:
+`.macos` is a **minimal, snapshot-style** script (no `sudo`, no system-level writes) that encodes only this machine's deliberate deltas from macOS defaults. It replaced the inherited 978-line craftzdog/mathiasbynens kitchen-sink (recoverable from git history). It applies three things:
 
-- **General**: Disable auto-correct, smart quotes, smart dashes, auto-capitalization
-- **Keyboard**: Fast key repeat (1), short initial delay (10), disable press-and-hold
-- **Trackpad**: Tap to click, bottom-right corner right-click
-- **Dock**: Auto-hide, show only open apps, icon size 36px, no recent apps
-- **Finder**: Show path bar, status bar, full POSIX path in title, list view default
-- **Screen**: Screenshots to Desktop in PNG, password required immediately after sleep
-- **Hot Corners**: Top-left Mission Control, Top-right Desktop, Bottom-left Screen saver
-- **Energy**: Display sleep 15min, no sleep on charger, 5min on battery
-- **Safari**: Develop menu enabled, Do Not Track, disable AutoFill
-- **Timezone**: Asia/Bangkok
+- **Language & region**: English (Thailand) + Thai — `AppleLocale=en_TH`, `AppleLanguages=(en-TH, th-TH)` (implies metric/Celsius; log out/in to apply)
+- **Trackpad**: tap to click (built-in + Bluetooth trackpad)
+- **Launcher hotkeys**: rebind Spotlight ("Show Spotlight search") from `⌘ Space` to `⌥ Space`, freeing `⌘ Space` for [Alfred](https://www.alfredapp.com/)
+
+> On macOS 26 (Tahoe) the Spotlight hotkey may need a one-time System Settings toggle to go live, and Alfred's `⌘ Space` must be set by hand in Alfred Settings (it's GUI-only). See the comments in `.macos`.
 
 ## Scripts
 
@@ -342,6 +337,21 @@ git diff          # good?  commit with `git cz`
 | `brew services start ollama` | Start the Ollama daemon |
 
 Measured on an M5 Max (48 GB): ~860 tok/s reading the spec, ~21 tok/s writing code, with a one-time ~8 s model load after ~5 min idle.
+
+## Claude Code
+
+Configuration for [Claude Code](https://claude.com/claude-code) is tracked and symlinked so it syncs to a fresh machine via `install.sh`. Local state and secrets stay per-machine in the gitignored `~/.claude/settings.local.json`.
+
+- **`.claude/statusline.sh`** — a custom status line ("Beacon"): model name, ghq-shortened `org/repo`, branch + dirty `*` + ahead/behind, a **work** badge for pttep repos, live context-window `%`, session cost, and lines `+/-`. Flat truecolor on the terminal's translucent background — no powerline glyphs. Needs `jq`. Test it with `echo '{...}' | ~/.claude/statusline.sh`.
+- **`.claude/settings.json`** — tracked + symlinked, so theme, hooks, enabled plugins, and the `statusLine` block all sync automatically (no hand-editing on a new machine).
+
+### Credential & spend scripts (`.scripts/`, on `$PATH`)
+
+| Script | Description |
+|--------|-------------|
+| `cc-auth [work\|personal\|status]` | Switch which **credentials** Claude Code authenticates with, **per repo** — Claude.ai subscription is the default everywhere; the work API key + gateway are stamped into a single repo's `.claude/settings.local.json` on demand. The secret lives only in `~/.claude/work-auth.json` (chmod 600, never committed). |
+| `cc-acct [work\|personal\|auto\|status]` | Pick which account the status line shows API **spend** for (`auto` = by repo: pttep → work, else personal). |
+| `cc-credits-refresh [work]` | Fetch month-to-date org API spend (Anthropic Cost API — needs an Admin key) into a non-secret cache the status line reads. |
 
 ## Syncing with upstream (craftzdog)
 
