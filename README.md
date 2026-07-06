@@ -12,10 +12,12 @@
 - [Git config](#git-config)
 - [macOS defaults](#macos-defaults)
 - [Scripts](#scripts)
+- [Local AI coding implementor](#local-ai-coding-implementor) (Claude designs, local model implements)
+- [Claude Code](#claude-code)
 
 ## Neovim setup
 
-Neovim configuration based on [LazyVim](https://www.lazyvim.org/) with [Solarized Osaka](https://github.com/craftzdog/solarized-osaka.nvim) theme (transparent).
+Neovim configuration based on [LazyVim](https://www.lazyvim.org/) with the [tokyonight](https://github.com/folke/tokyonight.nvim) theme (style `night`, remapped to the macOS Terminal "Clear Dark" palette, transparent).
 
 ### Requirements
 
@@ -38,7 +40,7 @@ Neovim configuration based on [LazyVim](https://www.lazyvim.org/) with [Solarize
 
 | Plugin | Description |
 |--------|-------------|
-| [Solarized Osaka](https://github.com/craftzdog/solarized-osaka.nvim) | Colorscheme (transparent) |
+| [tokyonight](https://github.com/folke/tokyonight.nvim) | Colorscheme (style `night`, remapped to Terminal "Clear Dark", transparent) |
 | [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) | Fuzzy finder with fzf-native and file-browser |
 | [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | Syntax highlighting (Go, Rust, TypeScript, CSS, Fish, SQL, and more) |
 | [blink.cmp](https://github.com/saghen/blink.cmp) | Completion engine |
@@ -86,7 +88,6 @@ Primary shell configuration in `.zshrc` using Zsh with [Starship](https://starsh
 - [Neovim](https://neovim.io/) - Editor (aliased as `vim` and `vi`)
 - [NVM](https://github.com/nvm-sh/nvm) - Node version manager
 - [mise](https://mise.jdx.dev/) - Runtime manager
-- [Nix](https://nixos.org/) / [DevBox](https://www.jetify.com/devbox) - Reproducible dev environments
 - [sparo](https://tiktok.github.io/sparo/) - Sparse Git checkout
 
 ### CLI Completions
@@ -259,18 +260,13 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 
 ## macOS defaults
 
-`.macos` script configures macOS system preferences:
+`.macos` is a **minimal, snapshot-style** script (no `sudo`, no system-level writes) that encodes only this machine's deliberate deltas from macOS defaults. It replaced the inherited 978-line craftzdog/mathiasbynens kitchen-sink (recoverable from git history). It applies three things:
 
-- **General**: Disable auto-correct, smart quotes, smart dashes, auto-capitalization
-- **Keyboard**: Fast key repeat (1), short initial delay (10), disable press-and-hold
-- **Trackpad**: Tap to click, bottom-right corner right-click
-- **Dock**: Auto-hide, show only open apps, icon size 36px, no recent apps
-- **Finder**: Show path bar, status bar, full POSIX path in title, list view default
-- **Screen**: Screenshots to Desktop in PNG, password required immediately after sleep
-- **Hot Corners**: Top-left Mission Control, Top-right Desktop, Bottom-left Screen saver
-- **Energy**: Display sleep 15min, no sleep on charger, 5min on battery
-- **Safari**: Develop menu enabled, Do Not Track, disable AutoFill
-- **Timezone**: Asia/Bangkok
+- **Language & region**: English (Thailand) + Thai — `AppleLocale=en_TH`, `AppleLanguages=(en-TH, th-TH)` (implies metric/Celsius; log out/in to apply)
+- **Trackpad**: tap to click (built-in + Bluetooth trackpad)
+- **Launcher hotkeys**: rebind Spotlight ("Show Spotlight search") from `⌘ Space` to `⌥ Space`, freeing `⌘ Space` for [Alfred](https://www.alfredapp.com/)
+
+> On macOS 26 (Tahoe) the Spotlight hotkey may need a one-time System Settings toggle to go live, and Alfred's `⌘ Space` must be set by hand in Alfred Settings (it's GUI-only). See the comments in `.macos`.
 
 ## Scripts
 
@@ -285,6 +281,77 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 - `.editorconfig` - 2-space indent, UTF-8, LF line endings
 - `.czrc` - cz-git adapter for conventional commits
 - `.config/lazygit/config.yml` - lazygit with commitizen (`git cz`)
+
+## Local AI coding implementor
+
+An **architect → implementor** split for offline, zero-cost coding: **Claude Code designs** (plans the change and writes a spec), and a **local open model implements** it (edits your repo autonomously). The diff is left uncommitted so you review before it becomes real. Everything after the design step runs on-device — no internet, no API cost.
+
+Installed on demand (the model pull is ~25 GB, so it's gated behind a flag):
+
+```bash
+./install.sh --with-localai
+```
+
+This installs [Ollama](https://ollama.com/) + [OpenCode](https://opencode.ai/), pulls the model, and rebuilds it with a baked-in 65536-token context (Ollama's 4K default silently truncates agent loops).
+
+### Components
+
+| Part | Tool | Role |
+|------|------|------|
+| Runtime | [Ollama](https://ollama.com/) (native, Homebrew) | Serves the model on the GPU (llama.cpp Metal backend) |
+| Model | `devstral-small-2:24b` (Mistral Devstral, q8_0) | The implementor — reliable native tool-calling, the default |
+| Harness | [OpenCode](https://opencode.ai/) | Autonomous agent that reads/edits files; **never auto-commits** |
+| Config | `.config/opencode/opencode.json` (tracked + symlinked) | Ollama provider, Devstral default, `permission.edit: allow` |
+
+An optional benchmark challenger, `qwen3.6-35b-a3b` (Qwen3.6 35B-A3B MoE), can be added by hand — see `CLAUDE.md` for the install (its `ollama pull` 400s on import, so it's built from the downloaded blob instead).
+
+### How to use it — Claude designs, local model implements
+
+```bash
+# 0. Start the runtime (once per boot)
+brew services start ollama
+
+# 1. DESIGN — in Claude Code, plan the change and write a spec, e.g. .task-spec.md.
+#    Put durable, repo-wide conventions in the repo's root AGENTS.md (auto-loaded).
+
+# 2. IMPLEMENT — hand the spec to the local model (defaults to Devstral, no -m needed):
+opencode run "$(cat .task-spec.md)"
+
+# 3. REVIEW — the edits land uncommitted in the working tree:
+git diff          # good?  commit with `git cz`
+                  # wrong? refine the spec and re-run, or fix by hand
+```
+
+- **One model, no flags** — `opencode run` uses Devstral by default; Qwen only loads if you pass `-m ollama/qwen3.6-35b-a3b`.
+- **Never auto-commits** — the diff always waits for your review.
+- **Local + free** after the design step.
+
+### Managing the runtime
+
+| Command | Description |
+|---------|-------------|
+| `ollama list` | List installed models |
+| `ollama ps` | Show what's loaded (want `100% GPU`, `65536` context) |
+| `ollama run devstral-small-2:24b` | Chat with the model directly in the terminal |
+| `ollama stop <model>` | Unload it from memory now |
+| `brew services start ollama` | Start the Ollama daemon |
+
+Measured on an M5 Max (48 GB): ~860 tok/s reading the spec, ~21 tok/s writing code, with a one-time ~8 s model load after ~5 min idle.
+
+## Claude Code
+
+Configuration for [Claude Code](https://claude.com/claude-code) is tracked and symlinked so it syncs to a fresh machine via `install.sh`. Local state and secrets stay per-machine in the gitignored `~/.claude/settings.local.json`.
+
+- **`.claude/statusline.sh`** — a custom status line ("Beacon"): model name, ghq-shortened `org/repo`, branch + dirty `*` + ahead/behind, a **work** badge for pttep repos, live context-window `%`, session cost, and lines `+/-`. Flat truecolor on the terminal's translucent background — no powerline glyphs. Needs `jq`. Test it with `echo '{...}' | ~/.claude/statusline.sh`.
+- **`.claude/settings.json`** — tracked + symlinked, so theme, hooks, enabled plugins, and the `statusLine` block all sync automatically (no hand-editing on a new machine).
+
+### Credential & spend scripts (`.scripts/`, on `$PATH`)
+
+| Script | Description |
+|--------|-------------|
+| `cc-auth [work\|personal\|status]` | Switch which **credentials** Claude Code authenticates with, **per repo** — Claude.ai subscription is the default everywhere; the work API key + gateway are stamped into a single repo's `.claude/settings.local.json` on demand. The secret lives only in `~/.claude/work-auth.json` (chmod 600, never committed). |
+| `cc-acct [work\|personal\|auto\|status]` | Pick which account the status line shows API **spend** for (`auto` = by repo: pttep → work, else personal). |
+| `cc-credits-refresh [work]` | Fetch month-to-date org API spend (Anthropic Cost API — needs an Admin key) into a non-secret cache the status line reads. |
 
 ## Syncing with upstream (craftzdog)
 
