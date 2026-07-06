@@ -1,0 +1,387 @@
+# Instincts generated from https://github.com/nenoteerawat/dotfiles
+# Generated: 2026-07-06T10:33:41.316Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: dotfiles-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: docs, feat
+
+## Evidence
+
+- 4 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat(localai): add Ollama + OpenCode local coding implementor, docs(localai): document the day-to-day architect → implementor flow
+
+---
+id: dotfiles-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Commit Length
+
+## Action
+
+Write moderate-length commit messages (~67 characters)
+
+## Evidence
+
+- Average commit message length: 67 chars
+- Based on 4 commits
+
+---
+id: dotfiles-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Naming Files
+
+## Action
+
+Use PascalCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: PascalCase
+
+---
+id: dotfiles-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: dotfiles-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: dotfiles-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: dotfiles-workflow-document-new-feature-or-workflow
+trigger: "when doing document new feature or workflow"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Workflow Document New Feature Or Workflow
+
+## Action
+
+Follow the document-new-feature-or-workflow workflow:
+1. Implement or integrate the new feature/tool/workflow.
+2. Update or create documentation files (e.g., README.md, CLAUDE.md) to explain usage, setup, and operational notes.
+3. Commit documentation changes with a message referencing the new feature/workflow.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: README.md, CLAUDE.md
+
+---
+id: dotfiles-workflow-update-configuration-and-documentation-in-tandem
+trigger: "when doing update configuration and documentation in tandem"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/nenoteerawat/dotfiles
+---
+
+# Dotfiles Workflow Update Configuration And Documentation In Tandem
+
+## Action
+
+Follow the update-configuration-and-documentation-in-tandem workflow:
+1. Edit or add configuration files (e.g., .config/opencode/opencode.json, install.sh).
+2. Update documentation files (e.g., CLAUDE.md) to reflect the new configuration or installation steps.
+3. Commit both configuration and documentation changes together.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: .config/opencode/opencode.json, install.sh, CLAUDE.md
+
+---
+id: dotfiles-instinct-filename-pascalcase
+trigger: "When creating a new TypeScript file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Filename Pascalcase
+
+## Action
+
+Name the file using PascalCase (e.g., MyModule.ts)
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.files
+
+---
+id: dotfiles-instinct-function-camelcase
+trigger: "When defining a new function in TypeScript"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Function Camelcase
+
+## Action
+
+Name the function using camelCase (e.g., doSomething)
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.functions
+
+---
+id: dotfiles-instinct-class-pascalcase
+trigger: "When defining a new class in TypeScript"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Class Pascalcase
+
+## Action
+
+Name the class using PascalCase (e.g., MyClass)
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.classes
+
+---
+id: dotfiles-instinct-constant-screaming-snake-case
+trigger: "When defining a constant in TypeScript"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Constant Screaming Snake Case
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE (e.g., MAX_SIZE)
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.constants
+
+---
+id: dotfiles-instinct-import-relative
+trigger: "When importing modules in TypeScript files"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Import Relative
+
+## Action
+
+Use relative import paths (e.g., import { X } from './X')
+
+## Evidence
+
+- Pattern in codeStyle.importStyle
+
+---
+id: dotfiles-instinct-export-named
+trigger: "When exporting modules or functions in TypeScript"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Export Named
+
+## Action
+
+Use named exports (e.g., export { MyFunction })
+
+## Evidence
+
+- Pattern in codeStyle.exportStyle
+
+---
+id: dotfiles-instinct-test-separate-location
+trigger: "When adding new tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Test Separate Location
+
+## Action
+
+Place test files in a separate location from source files
+
+## Evidence
+
+- Pattern in architecture.folderStructure.testLocation
+
+---
+id: dotfiles-instinct-git-conventional-commits
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Git Conventional Commits
+
+## Action
+
+Use the Conventional Commits format with a prefix (e.g., feat, docs) and a scope in parentheses
+
+## Evidence
+
+- Seen in commit: feat(localai): add Ollama + OpenCode local coding implementor
+- Pattern in commits.type and prefixes
+
+---
+id: dotfiles-instinct-git-commit-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Git Commit Length
+
+## Action
+
+Keep the commit message concise, around 67 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength
+
+---
+id: dotfiles-instinct-document-new-feature-or-workflow
+trigger: "When a significant new feature, workflow, or tool is added"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Document New Feature Or Workflow
+
+## Action
+
+Update or create documentation files (e.g., README.md, CLAUDE.md) to explain usage, setup, and operational notes, then commit with a message referencing the new feature/workflow
+
+## Evidence
+
+- Workflow: document-new-feature-or-workflow
+- Seen in commit: docs(localai): document the day-to-day architect → implementor flow
+
+---
+id: dotfiles-instinct-update-config-and-docs-together
+trigger: "When changing or adding configuration files (e.g., .config/opencode/opencode.json, install.sh)"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: nenoteerawat/dotfiles
+---
+
+# Dotfiles Instinct Update Config And Docs Together
+
+## Action
+
+Immediately update documentation files (e.g., CLAUDE.md) to reflect the configuration or installation changes, and commit both together
+
+## Evidence
+
+- Workflow: update-configuration-and-documentation-in-tandem
+- Pattern in files: .config/opencode/opencode.json, install.sh, CLAUDE.md
+
