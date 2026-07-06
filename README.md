@@ -12,6 +12,7 @@
 - [Git config](#git-config)
 - [macOS defaults](#macos-defaults)
 - [Scripts](#scripts)
+- [Local AI coding implementor](#local-ai-coding-implementor) (Claude designs, local model implements)
 
 ## Neovim setup
 
@@ -285,6 +286,62 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 - `.editorconfig` - 2-space indent, UTF-8, LF line endings
 - `.czrc` - cz-git adapter for conventional commits
 - `.config/lazygit/config.yml` - lazygit with commitizen (`git cz`)
+
+## Local AI coding implementor
+
+An **architect → implementor** split for offline, zero-cost coding: **Claude Code designs** (plans the change and writes a spec), and a **local open model implements** it (edits your repo autonomously). The diff is left uncommitted so you review before it becomes real. Everything after the design step runs on-device — no internet, no API cost.
+
+Installed on demand (the model pull is ~25 GB, so it's gated behind a flag):
+
+```bash
+./install.sh --with-localai
+```
+
+This installs [Ollama](https://ollama.com/) + [OpenCode](https://opencode.ai/), pulls the model, and rebuilds it with a baked-in 65536-token context (Ollama's 4K default silently truncates agent loops).
+
+### Components
+
+| Part | Tool | Role |
+|------|------|------|
+| Runtime | [Ollama](https://ollama.com/) (native, Homebrew) | Serves the model on the GPU (llama.cpp Metal backend) |
+| Model | `devstral-small-2:24b` (Mistral Devstral, q8_0) | The implementor — reliable native tool-calling, the default |
+| Harness | [OpenCode](https://opencode.ai/) | Autonomous agent that reads/edits files; **never auto-commits** |
+| Config | `.config/opencode/opencode.json` (tracked + symlinked) | Ollama provider, Devstral default, `permission.edit: allow` |
+
+An optional benchmark challenger, `qwen3.6-35b-a3b` (Qwen3.6 35B-A3B MoE), can be added by hand — see `CLAUDE.md` for the install (its `ollama pull` 400s on import, so it's built from the downloaded blob instead).
+
+### How to use it — Claude designs, local model implements
+
+```bash
+# 0. Start the runtime (once per boot)
+brew services start ollama
+
+# 1. DESIGN — in Claude Code, plan the change and write a spec, e.g. .task-spec.md.
+#    Put durable, repo-wide conventions in the repo's root AGENTS.md (auto-loaded).
+
+# 2. IMPLEMENT — hand the spec to the local model (defaults to Devstral, no -m needed):
+opencode run "$(cat .task-spec.md)"
+
+# 3. REVIEW — the edits land uncommitted in the working tree:
+git diff          # good?  commit with `git cz`
+                  # wrong? refine the spec and re-run, or fix by hand
+```
+
+- **One model, no flags** — `opencode run` uses Devstral by default; Qwen only loads if you pass `-m ollama/qwen3.6-35b-a3b`.
+- **Never auto-commits** — the diff always waits for your review.
+- **Local + free** after the design step.
+
+### Managing the runtime
+
+| Command | Description |
+|---------|-------------|
+| `ollama list` | List installed models |
+| `ollama ps` | Show what's loaded (want `100% GPU`, `65536` context) |
+| `ollama run devstral-small-2:24b` | Chat with the model directly in the terminal |
+| `ollama stop <model>` | Unload it from memory now |
+| `brew services start ollama` | Start the Ollama daemon |
+
+Measured on an M5 Max (48 GB): ~860 tok/s reading the spec, ~21 tok/s writing code, with a one-time ~8 s model load after ~5 min idle.
 
 ## Syncing with upstream (craftzdog)
 
