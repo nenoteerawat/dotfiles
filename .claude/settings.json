@@ -1,4 +1,5 @@
 {
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -45,17 +46,16 @@
       }
     ]
   },
+  "enableWorkflows": true,
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh",
     "padding": 0
   },
   "enabledPlugins": {
-    "lua-lsp@claude-plugins-official": true
+    "lua-lsp@claude-plugins-official": true,
+    "andrej-karpathy-skills@karpathy-skills": true
   },
-  "effortLevel": "ultracode",
-  "skipWorkflowUsageWarning": true,
-  "theme": "dark",
   "extraKnownMarketplaces": {
     "karpathy-skills": {
       "source": {
@@ -63,5 +63,10 @@
         "repo": "forrestchang/andrej-karpathy-skills"
       }
     }
-  }
+  },
+  "effortLevel": "xhigh",
+  "ultracode": true,
+  "tui": "fullscreen",
+  "skipWorkflowUsageWarning": true,
+  "theme": "dark"
 }

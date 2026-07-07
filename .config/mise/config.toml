@@ -1,6 +1,8 @@
 [tools]
+atlas = "latest"
 bun = "latest"
 ghq = "latest"
+go = "1.25.7"
 node = "latest"
 python = "latest"
 ruby = "latest"
