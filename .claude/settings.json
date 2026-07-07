@@ -62,7 +62,8 @@
     "exa@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": true,
     "sourcegraph@claude-plugins-official": true,
-    "andrej-karpathy-skills@karpathy-skills": true
+    "andrej-karpathy-skills@karpathy-skills": true,
+    "typescript-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "karpathy-skills": {
@@ -71,5 +72,6 @@
         "repo": "forrestchang/andrej-karpathy-skills"
       }
     }
-  }
+  },
+  "skipWorkflowUsageWarning": true
 }
