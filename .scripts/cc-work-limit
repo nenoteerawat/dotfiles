@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# cc-work-limit — Claude Code hook enforcing the work-account daily spend cap.
+#
+# Registered in ~/.claude/settings.json for two hook events:
+#   UserPromptSubmit  warn at >=80% of WORK_DAILY_BUDGET, block at >=100%
+#   PreToolUse (all)  deny tool calls at >=100% — stops a RUNNING turn
+#                     mid-flight (the statusline keeps re-rendering during a
+#                     turn, so the ledger keeps growing while Claude works)
+#
+# Spend source: the local ledger written by ~/.claude/statusline.sh —
+# ~/.claude/cache/work-day/<YYYY-MM-DD>/<session_id> holds each session's
+# cumulative cost (local dates, so the cap resets at local midnight).
+#
+# A session is work-billed iff ANTHROPIC_API_KEY is in the environment:
+# cc-auth work stamps it into the repo's .claude/settings.local.json env
+# block, Claude Code injects that block into its process env, and hooks
+# inherit it. Fallback (env injection unavailable): check key PRESENCE in
+# that file via jq. The key's value is never read into a variable.
+#
+# WORK_DAILY_BUDGET rides the same cc-auth stamp (one more entry in
+# ~/.claude/work-auth.json). Default 100 for work repos stamped before the
+# field existed; 0 disables enforcement. Personal/subscription sessions
+# always exit 0 untouched.
+#
+# Every failure path degrades to "allow" — this hook must never wedge a
+# session because of a corrupt ledger or missing tool.
+set -u
+
+ledger_root="$HOME/.claude/cache/work-day"
+
+command -v jq >/dev/null 2>&1 || exit 0
+input=$(cat 2>/dev/null) || input=""
+
+budget="${WORK_DAILY_BUDGET:-}"
+if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+  # fallback detection via the repo's settings.local.json (presence only)
+  cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
+  [[ -n "$cwd" && -d "$cwd" ]] || exit 0
+  top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
+  slj="$top/.claude/settings.local.json"
+  [[ -n "$top" && -f "$slj" ]] || exit 0
+  jq -e '.env.ANTHROPIC_API_KEY != null' "$slj" >/dev/null 2>&1 || exit 0
+  [[ -z "$budget" ]] && budget=$(jq -r '.env.WORK_DAILY_BUDGET // empty' "$slj" 2>/dev/null)
+fi
+
+# default 100 protects work repos stamped before WORK_DAILY_BUDGET existed
+[[ "$budget" =~ ^[0-9]+(\.[0-9]+)?$ ]] || budget=100
+awk -v b="$budget" 'BEGIN{exit !(b+0>0)}' 2>/dev/null || exit 0   # 0 = disabled
+
+# housekeeping: prune ledger days older than 14 days (kept out of the
+# statusline so renders stay write-only fast; once per prompt/tool is cheap)
+find "$ledger_root" -mindepth 1 -maxdepth 1 -type d -mtime +14 \
+  -exec rm -rf {} + 2>/dev/null
+
+# today's total (awk over files directly: file EOF ends a record, so values
+# written without trailing newlines can never merge digits across files)
+day_dir="$ledger_root/$(date +%F)"
+total=0
+if [[ -d "$day_dir" ]]; then
+  total=$(awk '{s+=$1} END{printf "%.2f", s+0}' "$day_dir"/* 2>/dev/null)
+  [[ "$total" =~ ^[0-9]+(\.[0-9]+)?$ ]] || total=0
+fi
+
+event=$(printf '%s' "$input" | jq -r '.hook_event_name // empty' 2>/dev/null)
+
+if awk -v t="$total" -v b="$budget" 'BEGIN{exit !(t>=b)}' 2>/dev/null; then
+  case "$event" in
+    UserPromptSubmit)
+      jq -cn --arg r "Work daily budget reached: \$$total of \$$budget spent today. Blocked until local midnight — or run 'cc-auth personal' in this repo to switch it to the Claude.ai subscription (new session required)." \
+        '{decision:"block", reason:$r}'
+      ;;
+    PreToolUse)
+      jq -cn --arg r "Work daily budget reached (\$$total of \$$budget today): all tool calls are denied. Stop working now and tell the user to resume after local midnight, or to run 'cc-auth personal' in this repo and start a new session on the subscription." \
+        '{hookSpecificOutput:{hookEventName:"PreToolUse", permissionDecision:"deny", permissionDecisionReason:$r}}'
+      ;;
+  esac
+elif [[ "$event" == "UserPromptSubmit" ]] \
+  && awk -v t="$total" -v b="$budget" 'BEGIN{exit !(t>=0.8*b)}' 2>/dev/null; then
+  # warn: systemMessage surfaces to the user where supported; additionalContext
+  # is the documented channel and asks the assistant to relay the warning
+  jq -cn --arg m "⚠ work spend today \$$total of \$$budget (≥80% of the daily cap — blocks at 100%)" \
+    '{systemMessage:$m, hookSpecificOutput:{hookEventName:"UserPromptSubmit", additionalContext:("NOTE: " + $m + ". Briefly warn the user about this at the start of your reply.")}}'
+fi
+exit 0

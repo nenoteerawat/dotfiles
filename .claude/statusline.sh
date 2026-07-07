@@ -129,6 +129,61 @@ if (( added > 0 || removed > 0 )); then
   (( removed > 0 )) && out+="${C_RED}-${removed}${R}"
 fi
 
+# --- work daily spend: local ledger + "day $X/$Y" segment ---
+# A session bills the work API iff ANTHROPIC_API_KEY is present — cc-auth work
+# stamps it into the repo's .claude/settings.local.json env block and Claude
+# Code injects that block into the process env, which this subprocess inherits.
+# Fallback (env injection unavailable): check key PRESENCE in that file via jq.
+# The key's value is never stored or used here — presence only.
+# Ledger: one file per session per local day, cumulative session cost,
+# monotonic writes -> concurrent sessions never race. cc-work-limit (the
+# enforcement hook) reads the same ledger and prunes old days.
+is_work_billed=0
+day_budget="${WORK_DAILY_BUDGET:-}"
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+  is_work_billed=1
+elif [[ -n "$cwd" && -d "$cwd" ]]; then
+  top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
+  slj="$top/.claude/settings.local.json"
+  if [[ -n "$top" && -f "$slj" ]] \
+     && jq -e '.env.ANTHROPIC_API_KEY != null' "$slj" >/dev/null 2>&1; then
+    is_work_billed=1
+    [[ -z "$day_budget" ]] && day_budget=$(jq -r '.env.WORK_DAILY_BUDGET // empty' "$slj" 2>/dev/null)
+  fi
+fi
+
+if (( is_work_billed )); then
+  # default 100 protects work repos stamped before WORK_DAILY_BUDGET existed
+  [[ "$day_budget" =~ ^[0-9]+(\.[0-9]+)?$ ]] || day_budget=100
+  day_dir="$HOME/.claude/cache/work-day/$(date +%F)"
+  sid=$(get '.session_id // empty'); sid=${sid//[^a-zA-Z0-9._-]/}
+  if [[ -n "$sid" ]] && awk "BEGIN{exit !(($cost)+0 > 0)}" 2>/dev/null; then
+    mkdir -p "$day_dir" 2>/dev/null
+    prev=$(cat "$day_dir/$sid" 2>/dev/null)
+    [[ "$prev" =~ ^[0-9]+(\.[0-9]+)?$ ]] || prev=0
+    if awk -v c="$cost" -v p="$prev" 'BEGIN{exit !(c+0>p+0)}' 2>/dev/null; then
+      printf '%s\n' "$cost" > "$day_dir/$sid" 2>/dev/null
+    fi
+  fi
+  day_total=0
+  if [[ -d "$day_dir" ]]; then
+    # awk over the files directly (not cat|): each file EOF ends its record,
+    # so a legacy value written without a trailing newline can't merge digits
+    # with the next file
+    day_total=$(awk '{s+=$1} END{printf "%.2f", s+0}' "$day_dir"/* 2>/dev/null)
+    [[ "$day_total" =~ ^[0-9]+(\.[0-9]+)?$ ]] || day_total=0
+  fi
+  if awk -v b="$day_budget" 'BEGIN{exit !(b+0>0)}' 2>/dev/null; then
+    dc="$C_FG"   # thresholds match the cc-work-limit hook: warn 80%, block 100%
+    awk -v t="$day_total" -v b="$day_budget" 'BEGIN{exit !(t>=0.8*b)}' 2>/dev/null && dc="$C_YEL"
+    awk -v t="$day_total" -v b="$day_budget" 'BEGIN{exit !(t>=b)}'     2>/dev/null && dc="$C_BRED"
+    out+="${SEP}${C_DIM}day ${R}${dc}\$${day_total}${R}${C_DIM}/\$${day_budget%%.*}${R}"
+  else
+    # budget 0 = enforcement disabled; still show today's figure
+    out+="${SEP}${C_DIM}day ${R}${C_FG}\$${day_total}${R}"
+  fi
+fi
+
 # --- org API spend (work account only; month-to-date vs budget + today) ---
 # This NEVER reads the Admin key — only a non-secret JSON cache written by
 # ~/.scripts/cc-credits-refresh, which is spawned in the background when stale.

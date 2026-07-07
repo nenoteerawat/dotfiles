@@ -280,7 +280,8 @@ else
 {
   "ANTHROPIC_API_KEY": "REPLACE-with-work-api-key",
   "ANTHROPIC_BASE_URL": "https://aws-external-anthropic.us-east-1.api.aws",
-  "ANTHROPIC_CUSTOM_HEADERS": "anthropic-workspace-id: REPLACE-with-wrkspc-id"
+  "ANTHROPIC_CUSTOM_HEADERS": "anthropic-workspace-id: REPLACE-with-wrkspc-id",
+  "WORK_DAILY_BUDGET": "100"
 }
 WAEOF
   )

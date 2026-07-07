@@ -8,6 +8,10 @@
           {
             "type": "command",
             "command": "$HOME/.config/tmux/plugins/tmux-claude-session-manager/scripts/state.sh working"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.scripts/cc-work-limit"
           }
         ]
       }
@@ -30,6 +34,15 @@
           {
             "type": "command",
             "command": "$HOME/.config/tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.scripts/cc-work-limit"
           }
         ]
       }

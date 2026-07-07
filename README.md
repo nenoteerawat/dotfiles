@@ -351,6 +351,7 @@ The status line distinguishes the two accounts in two independent ways:
 
 1. **The yellow `work` badge** — pure repo detection, no config. It appears when the current repo belongs to a work org: the `origin` remote uses the `github.com-pttep` SSH host or a `pttep-pcl`/`pttep-fusionsol` org, or the ghq path starts with one of those orgs. Personal repos show no badge at all (silence = personal).
 2. **The `acct` spend segment** — shown **only when the active account is work**, because the org (work) account has a Cost API while the personal account is an individual account and has none. It renders month-to-date API spend vs your budget plus today's spend, e.g. `acct 62% $312/$500 · today $12` (the `%` turns yellow ≥ 70, red ≥ 90). Other states: `acct …` fetching · `acct ⚠` no/invalid Admin key · `acct ✗` API error.
+3. **The `day` daily-cap segment** — shown only in **work-billed sessions** (the repo was stamped by `cc-auth work`, so `ANTHROPIC_API_KEY` is in the session's environment). Renders today's local spend vs the `WORK_DAILY_BUDGET` cap, e.g. `day $37.50/$100`, turning yellow ≥ 80% and red ≥ 100% — the same thresholds where the `cc-work-limit` hook warns and then blocks. Unlike `acct`, this needs no Admin key and no network: the status line itself records each session's cost into a local ledger (`~/.claude/cache/work-day/<date>/<session_id>`) and sums it. Resets at local midnight; counts only Claude Code usage on this machine.
 
 Which account is "active" is decided by `~/.claude/statusline-account`, written by `cc-acct`:
 
@@ -367,6 +368,7 @@ So in a personal repo you normally see no badge and no `acct` segment; in a ptte
 | `cc-auth [work\|personal\|status]` | Switch which **credentials** Claude Code authenticates with, **per repo** — Claude.ai subscription is the default everywhere; the work API key + gateway are stamped into a single repo's `.claude/settings.local.json` on demand. The secret lives only in `~/.claude/work-auth.json` (chmod 600, never committed). |
 | `cc-acct [work\|personal\|auto\|status]` | Pick which account the status line shows API **spend** for (`auto` = by repo: pttep → work, else personal). |
 | `cc-credits-refresh [work]` | Fetch month-to-date org API spend (Anthropic Cost API — needs an Admin key) into a non-secret cache the status line reads. |
+| `cc-work-limit` | Claude Code **hook** (auto-registered via the tracked `settings.json`, not a CLI) enforcing the work **$100/day cap**: warns at ≥ 80% of `WORK_DAILY_BUDGET`, blocks new prompts **and denies tool calls** at ≥ 100%. Reads the same local ledger as the `day` segment; personal/subscription sessions are never touched. The budget is one more entry in `~/.claude/work-auth.json`, stamped per-repo by `cc-auth work` (re-run it once in repos stamped earlier); set it to `0` to disable enforcement. |
 
 ## Syncing with upstream (craftzdog)
 
