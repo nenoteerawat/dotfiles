@@ -18,20 +18,52 @@ past the policy limit.
   No Admin key needed, no ~5-minute lag, so enforcement is real-time.
   Trade-off (accepted): only counts Claude Code usage on this Mac.
 - **Enforcement: warn at 80%, hard block at 100%.**
+- **All work-account configuration follows the cc-auth model.** No user-level
+  config file: the daily budget lives in `~/.claude/work-auth.json` and is
+  stamped into each work repo's `.claude/settings.local.json` by
+  `cc-auth work`, exactly like the credentials.
 - The existing Cost API plumbing (`cc-credits-refresh`, monthly `acct`
   segment, `spent_today` cache field) stays unchanged — it remains the monthly
   org view, dormant until an Admin key is ever supplied.
 
-## Work-account detection (billing-accurate)
+## Budget configuration — follows cc-auth, no user-level file
 
-A session bills the work API iff the current repo's
-`.claude/settings.local.json` (as stamped by `cc-auth work`) contains
-`ANTHROPIC_API_KEY`. This — not the `cc-acct` display toggle — gates both the
-ledger recording and the hook. Subscription (personal) sessions are never
-tracked and never blocked.
+`WORK_DAILY_BUDGET` (e.g. `"100"`) is added as one more entry in
+`~/.claude/work-auth.json` — the same JSON object that holds the work
+credentials. Because `cc-auth` reads the work env block dynamically from that
+file ("the block can grow/shrink without editing this script"), **cc-auth
+needs no code change**:
 
-Detection cost: resolve repo top with `git rev-parse --show-toplevel`, check
-the file exists, one `jq -e` for the key. All guarded, a few ms.
+- `cc-auth work` stamps `WORK_DAILY_BUDGET` into the repo's
+  `.claude/settings.local.json` `env` block alongside the key/gateway/header.
+- `cc-auth personal` strips it with the rest of the work block.
+- `install.sh` seeds the new field in the `work-auth.json` template.
+- **Migration note:** repos stamped before this change won't have the budget
+  until `cc-auth work` is re-run in them (stamping merges, so a re-run is
+  safe). Until then the default below still protects them.
+
+## Work-account detection (billing-accurate, env-based)
+
+Claude Code injects the settings `env` block into its process environment, and
+the statusline and hooks run as child processes, so they inherit it:
+
+- **Work session** ⇔ `ANTHROPIC_API_KEY` is set in the inherited environment
+  (billing truth: that is the variable that makes the session bill the work
+  gateway). Subscription (personal) sessions are never tracked and never
+  blocked.
+- **Budget** = `$WORK_DAILY_BUDGET` if set and numeric, else **default 100**
+  (protects work repos stamped before the budget field existed).
+  `WORK_DAILY_BUDGET=0` disables the segment thresholds and all enforcement
+  (escape hatch, set per-repo via work-auth.json or a hand edit).
+
+Detection cost: two env-var checks — effectively free, no file reads.
+
+**Verification gate (implementation step 1):** confirm with a throwaway hook +
+statusline echo that both actually inherit `env`-block variables. If either
+does not, fall back for that component to reading
+`.env.ANTHROPIC_API_KEY` / `.env.WORK_DAILY_BUDGET` from
+`<repo-top>/.claude/settings.local.json` via `jq` (cwd comes from the
+component's stdin JSON; guarded, a few ms).
 
 ## Component 1 — spend ledger (recorded by the statusline)
 
@@ -64,21 +96,8 @@ day $37/$100
 Color escalation matches the hook thresholds: default foreground, **yellow at
 ≥ 80%**, **bright red at ≥ 100%**. Rendered whenever the session is
 work-billed, independent of the (possibly dormant) monthly `acct` segment.
-
-### Budget configuration — `~/.claude/work-limit.conf`
-
-Non-secret, optional, sourced by both the statusline and the hook:
-
-```sh
-WORK_DAILY_BUDGET=100
-```
-
-Default is **100** when the file is absent. `WORK_DAILY_BUDGET=0` disables
-both the segment's coloring thresholds and all hook enforcement (escape
-hatch). Kept separate from `statusline-credits.env` to preserve the invariant
-that **the statusline never opens the file containing the Admin key**.
-`install.sh` seeds this file (non-600, it holds no secret) alongside the
-existing credential template.
+The budget comes from the inherited `$WORK_DAILY_BUDGET` (see above) — the
+statusline still never opens any secret file.
 
 ## Component 3 — enforcement hook (`.scripts/cc-work-limit`)
 
@@ -86,10 +105,11 @@ One bash script (new file in `.scripts/`, instantly on `$PATH` via the
 whole-dir symlink), registered in the tracked `~/.claude/settings.json` for
 two events. Logic per invocation:
 
-1. Parse hook stdin JSON (`cwd`, `hook_event_name`) with `jq` (exit 0 if `jq`
-   missing).
-2. If the `cwd` repo is not work-billed → exit 0 (fast path, no output).
-3. Sum today's ledger; read `WORK_DAILY_BUDGET` (0 → exit 0).
+1. If `ANTHROPIC_API_KEY` is not in the environment → exit 0 (fast path:
+   personal session, no output, no file reads).
+2. Resolve budget from `$WORK_DAILY_BUDGET` (default 100; 0 → exit 0).
+3. Parse hook stdin JSON (`hook_event_name`) with `jq` (exit 0 if `jq`
+   missing); sum today's ledger.
 4. Emit per event:
 
 | Event | Condition | Output |
@@ -118,16 +138,19 @@ entry (matcher `""` = all tools), both invoking
 
 ## Testing
 
-- Statusline: `echo '<fake status JSON with cost + session_id>' | ~/.claude/statusline.sh`
-  from a work-stamped repo dir and a personal dir; verify ledger file appears
-  only for work and the `day` segment renders with correct colors.
+- Env inheritance gate first (see verification gate above).
+- Statusline: `ANTHROPIC_API_KEY=x WORK_DAILY_BUDGET=100 bash -c "echo '<fake status JSON with cost + session_id>' | ~/.claude/statusline.sh"`
+  vs the same without the env vars; verify the ledger file appears only in the
+  work case and the `day` segment renders with correct colors at <80%, ≥80%,
+  ≥100%.
 - Ledger monotonicity: render twice with a lower second cost; file keeps max.
-- Hook: pipe fake `UserPromptSubmit` / `PreToolUse` JSON into
-  `cc-work-limit` with a ledger seeded at $85 and $105; assert warn JSON,
-  block JSON, and deny JSON respectively; assert silent exit 0 in a personal
-  repo and with `WORK_DAILY_BUDGET=0`.
-- End-to-end: temporarily set `WORK_DAILY_BUDGET=1` in `work-limit.conf`,
-  start a Claude Code session in a work repo, confirm the prompt block fires.
+- Hook: pipe fake `UserPromptSubmit` / `PreToolUse` JSON into `cc-work-limit`
+  with a ledger seeded at $85 and $105 and the env vars set; assert warn JSON,
+  block JSON, and deny JSON respectively; assert silent exit 0 without
+  `ANTHROPIC_API_KEY` and with `WORK_DAILY_BUDGET=0`.
+- End-to-end: set `WORK_DAILY_BUDGET` to `1` in a work repo's
+  `.claude/settings.local.json`, start a Claude Code session there, confirm
+  the prompt block fires; restore afterwards.
 
 ## Out of scope
 
