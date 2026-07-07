@@ -129,7 +129,7 @@ if (( added > 0 || removed > 0 )); then
   (( removed > 0 )) && out+="${C_RED}-${removed}${R}"
 fi
 
-# --- org API spend (work account only; month-to-date vs budget) ---
+# --- org API spend (work account only; month-to-date vs budget + today) ---
 # This NEVER reads the Admin key — only a non-secret JSON cache written by
 # ~/.scripts/cc-credits-refresh, which is spawned in the background when stale.
 # Active account: explicit override file, else by repo (work badge => work).
@@ -160,9 +160,11 @@ if [[ "$active_acct" == "work" ]]; then
         cred_pct=$(jq -r '.pct // 0'    "$cred_cache" 2>/dev/null); cred_pct=${cred_pct%.*}
         cred_spent=$(jq -r '.spent // 0' "$cred_cache" 2>/dev/null); cred_spent=${cred_spent%.*}
         cred_budget=$(jq -r '.budget // 0' "$cred_cache" 2>/dev/null); cred_budget=${cred_budget%.*}
+        cred_today=$(jq -r '.spent_today // 0' "$cred_cache" 2>/dev/null); cred_today=${cred_today%.*}
         [[ "$cred_pct" =~ ^[0-9]+$ ]] || cred_pct=0
         ac="$C_FG"; (( cred_pct >= 70 )) && ac="$C_YEL"; (( cred_pct >= 90 )) && ac="$C_BRED"
         out+="${SEP}${C_DIM}acct ${R}${ac}${cred_pct}%${R}${C_DIM} \$${cred_spent}/\$${cred_budget}${R}"
+        out+="${C_DIM} · today \$${cred_today}${R}"
         ;;
       no_key) out+="${SEP}${C_DIM}acct ⚠${R}" ;;   # set an Admin key in statusline-credits.env
       error)  out+="${SEP}${C_DIM}acct ✗${R}" ;;

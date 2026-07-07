@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # cc-credits-refresh <account>   (default: work)
 #
-# Fetches month-to-date Anthropic API spend for an account from the Cost API
-# and writes a small NON-SECRET JSON cache the statusline reads. This is the
-# ONLY file that touches the Admin key.
+# Fetches month-to-date (and today's) Anthropic API spend for an account from
+# the Cost API and writes a small NON-SECRET JSON cache the statusline reads.
+# This is the ONLY file that touches the Admin key.
 #
 # Security model:
 #   - The Admin key lives in ~/.claude/statusline-credits.env (chmod 600,
@@ -30,7 +30,7 @@ mkdir -p "$cache_dir"
 
 now=$(date +%s)
 
-# write <status> <spent> <budget> <pct> [msg]
+# write <status> <spent> <budget> <pct> [msg] [spent_today]
 write() {
   command -v jq >/dev/null 2>&1 || return 0
   local tmp="$cache.tmp.$$"
@@ -41,8 +41,9 @@ write() {
     --argjson b  "${3:-0}" \
     --argjson p  "${4:-0}" \
     --arg     m  "${5:-}" \
+    --argjson st "${6:-0}" \
     --argjson t  "$now" \
-    '{account:$a,status:$s,spent:$sp,budget:$b,pct:$p,msg:$m,fetched_at:$t}' \
+    '{account:$a,status:$s,spent:$sp,budget:$b,pct:$p,msg:$m,spent_today:$st,fetched_at:$t}' \
     > "$tmp" 2>/dev/null && mv "$tmp" "$cache"
 }
 
@@ -82,8 +83,13 @@ end=$(date -u -v+1d +%Y-%m-%dT00:00:00Z 2>/dev/null \
    || date -u -d tomorrow +%Y-%m-%dT00:00:00Z 2>/dev/null)
 [[ -n "$end" ]] || end=$(date -u +%Y-%m-%dT23:59:59Z)
 
+# start of today, UTC — matches a bucket's own "starting_at" boundary
+# (bucket_width=1d below), so today's figure is picked out of the SAME
+# month-to-date response rather than a second fetch.
+today_start=$(date -u +%Y-%m-%dT00:00:00Z)
+
 # --- fetch (key via stdin config -> never in argv); sum amount (cents) ---
-cents=0; page=""; ok=1
+cents=0; today_cents=0; page=""; ok=1
 for _ in 1 2 3 4 5; do   # paginate defensively; a month of daily buckets is ~1 page
   resp=$(printf 'header = "x-api-key: %s"\nheader = "anthropic-version: 2023-06-01"\n' "$KEY" \
     | curl -sS --max-time 10 -G "https://api.anthropic.com/v1/organizations/cost_report" \
@@ -101,6 +107,10 @@ for _ in 1 2 3 4 5; do   # paginate defensively; a month of daily buckets is ~1 
   c=$(printf '%s' "$resp" | jq -r '[.data[].results[].amount | tonumber] | add // 0' 2>/dev/null)
   [[ "$c" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { ok=0; break; }
   cents=$(awk -v a="$cents" -v b="$c" 'BEGIN{printf "%.6f", a+b}')
+  tc=$(printf '%s' "$resp" | jq -r --arg d "$today_start" \
+    '[.data[] | select(.starting_at==$d) | .results[].amount | tonumber] | add // 0' 2>/dev/null)
+  [[ "$tc" =~ ^[0-9]+(\.[0-9]+)?$ ]] || tc=0
+  today_cents=$(awk -v a="$today_cents" -v b="$tc" 'BEGIN{printf "%.6f", a+b}')
   more=$(printf '%s' "$resp" | jq -r '.has_more // false' 2>/dev/null)
   page=$(printf '%s' "$resp" | jq -r '.next_page // ""' 2>/dev/null)
   [[ "$more" == "true" && -n "$page" ]] || break
@@ -109,8 +119,9 @@ done
 (( ok )) || { write error 0 "$BUDGET" 0 "cost API request failed"; exit 0; }
 
 spent=$(awk -v c="$cents" 'BEGIN{printf "%.2f", c/100}')
+spent_today=$(awk -v c="$today_cents" 'BEGIN{printf "%.2f", c/100}')
 pct=0
 if awk -v b="$BUDGET" 'BEGIN{exit !(b>0)}'; then
   pct=$(awk -v s="$spent" -v b="$BUDGET" 'BEGIN{printf "%.0f", (s/b)*100}')
 fi
-write ok "$spent" "$BUDGET" "$pct" ""
+write ok "$spent" "$BUDGET" "$pct" "" "$spent_today"

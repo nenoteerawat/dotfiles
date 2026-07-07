@@ -345,6 +345,21 @@ Configuration for [Claude Code](https://claude.com/claude-code) is tracked and s
 - **`.claude/statusline.sh`** — a custom status line ("Beacon"): model name, ghq-shortened `org/repo`, branch + dirty `*` + ahead/behind, a **work** badge for pttep repos, live context-window `%`, session cost, and lines `+/-`. Flat truecolor on the terminal's translucent background — no powerline glyphs. Needs `jq`. Test it with `echo '{...}' | ~/.claude/statusline.sh`.
 - **`.claude/settings.json`** — tracked + symlinked, so theme, hooks, enabled plugins, and the `statusLine` block all sync automatically (no hand-editing on a new machine).
 
+### Work vs personal in the status line
+
+The status line distinguishes the two accounts in two independent ways:
+
+1. **The yellow `work` badge** — pure repo detection, no config. It appears when the current repo belongs to a work org: the `origin` remote uses the `github.com-pttep` SSH host or a `pttep-pcl`/`pttep-fusionsol` org, or the ghq path starts with one of those orgs. Personal repos show no badge at all (silence = personal).
+2. **The `acct` spend segment** — shown **only when the active account is work**, because the org (work) account has a Cost API while the personal account is an individual account and has none. It renders month-to-date API spend vs your budget plus today's spend, e.g. `acct 62% $312/$500 · today $12` (the `%` turns yellow ≥ 70, red ≥ 90). Other states: `acct …` fetching · `acct ⚠` no/invalid Admin key · `acct ✗` API error.
+
+Which account is "active" is decided by `~/.claude/statusline-account`, written by `cc-acct`:
+
+- `cc-acct auto` (the default when the file is absent) — follow the repo: work badge ⇒ work, otherwise personal.
+- `cc-acct work` / `cc-acct personal` — force it regardless of repo.
+- `cc-acct status` — show the current setting.
+
+So in a personal repo you normally see no badge and no `acct` segment; in a pttep repo you see both. The spend data comes from a non-secret cache (`~/.claude/cache/credits-work.json`) that `cc-credits-refresh` rewrites in the background when it's older than 10 minutes — the status line itself never touches the Admin key or the network. Note this is display-only: it does **not** change which credentials Claude Code uses — that's `cc-auth` (below).
+
 ### Credential & spend scripts (`.scripts/`, on `$PATH`)
 
 | Script | Description |
