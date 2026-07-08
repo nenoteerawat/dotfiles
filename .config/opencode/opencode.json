@@ -15,7 +15,7 @@
   "permission": { "edit": "allow", "bash": "ask", "webfetch": "deny" },
   "agent": {
     "implement": {
-      "description": "Unattended local implementor (cc-impl) — bash allowed except destructive/exfil commands",
+      "description": "Unattended local implementor (local-implementor skill) — bash allowed except destructive/exfil commands",
       "permission": {
         "bash": {
           "*": "allow",
