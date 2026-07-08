@@ -85,6 +85,9 @@ Pods/
 !.claude/settings.json
 !.claude/skills/
 
+# Superpowers plan/spec output — working documents, not repo content
+docs/superpowers/
+
 # Jetbrain tools
 .idea
 
