@@ -13,6 +13,10 @@
 #   strip-global  one-time: remove the work env block from ~/.claude/settings.local.json
 #                 (backs up to *.bak first) so personal becomes the global default
 #
+# The statusline follows this same auth state automatically (a work-billed
+# session shows the day/acct spend segments) — there is no separate display
+# toggle. (cc-acct + ~/.claude/statusline-account were absorbed here.)
+#
 # The secret lives ONLY in ~/.claude/work-auth.json (chmod 600, never committed):
 # a JSON object holding exactly the work `env` entries. This script copies it
 # into the per-repo settings.local.json and keeps that file out of git via the
@@ -149,7 +153,7 @@ case "$cmd" in
     ;;
 
   -h|--help)
-    sed -n '2,30p' "$0"
+    sed -n '2,35p' "$0"
     ;;
 
   *)

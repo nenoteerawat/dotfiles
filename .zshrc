@@ -1,6 +1,6 @@
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
-# Personal scripts (cc-auth, cc-acct, ide, …) — invoke by bare name from any repo
+# Personal scripts (cc-auth, ide, …) — invoke by bare name from any repo
 export PATH="$HOME/.scripts:$PATH"
 
 # Golang PATH
@@ -12,6 +12,14 @@ export PATH=$PATH:Applications/GoLand.app/Contents/MacOS
 
 # Cert Cloudflare (only export when present, else node/npm warn on every run)
 [ -r "$HOME/.ssh/gateway-ca-cloudflare.pem" ] && export NODE_EXTRA_CA_CERTS="$HOME/.ssh/gateway-ca-cloudflare.pem"
+
+# GitHub token for the Claude Code github MCP plugin (API auth can't use SSH keys).
+# Reuses gh's keyring OAuth token — no PAT to manage, no secret written to disk.
+if command -v gh >/dev/null; then
+  _gh_token="$(gh auth token 2>/dev/null)"
+  [ -n "$_gh_token" ] && export GITHUB_PERSONAL_ACCESS_TOKEN="$_gh_token"
+  unset _gh_token
+fi
 
 
 # FZF Style

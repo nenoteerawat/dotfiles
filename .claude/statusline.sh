@@ -187,15 +187,10 @@ fi
 # --- org API spend (work account only; month-to-date vs budget + today) ---
 # This NEVER reads the Admin key — only a non-secret JSON cache written by
 # ~/.scripts/cc-credits-refresh, which is spawned in the background when stale.
-# Active account: explicit override file, else by repo (work badge => work).
-acct_state=$(cat "$HOME/.claude/statusline-account" 2>/dev/null)
-case "${acct_state:-auto}" in
-  work)     active_acct="work" ;;
-  personal) active_acct="personal" ;;
-  *)        [[ -n "$badge" ]] && active_acct="work" || active_acct="personal" ;;
-esac
+# Active account follows the AUTH state (cc-auth), not a separate toggle:
+# work-billed session (is_work_billed above) => work, else personal.
 # Only the work (org) account has a Cost API; personal is individual -> skip.
-if [[ "$active_acct" == "work" ]]; then
+if (( is_work_billed )); then
   cred_cache="$HOME/.claude/cache/credits-work.json"
   refresher="$HOME/.scripts/cc-credits-refresh"
   # spawn a detached background refresh if the cache is missing or > 10 min old

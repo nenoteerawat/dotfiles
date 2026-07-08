@@ -202,7 +202,7 @@ CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghos
 # Whole-directory symlinks: ~/X -> repo/X. Only for dirs with NO tool-generated
 # files (unlike .config/* which gets Mason/lazy-lock/plugins written into it), so
 # a whole-dir symlink is safe AND new authored files appear without re-running
-# install.sh. .scripts is also on $PATH (see .zshrc), so cc-auth/cc-acct/ide are
+# install.sh. .scripts is also on $PATH (see .zshrc), so cc-auth/ide are
 # bare commands from any repo.
 HOME_DIRS=(.scripts)
 
