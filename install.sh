@@ -203,8 +203,10 @@ CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghos
 # files (unlike .config/* which gets Mason/lazy-lock/plugins written into it), so
 # a whole-dir symlink is safe AND new authored files appear without re-running
 # install.sh. .scripts is also on $PATH (see .zshrc), so cc-auth/ide are
-# bare commands from any repo.
-HOME_DIRS=(.scripts)
+# bare commands from any repo. .claude/skills holds authored user-level Claude
+# Code skills (nothing writes there but us); a skill created in ~/.claude/skills
+# lands in the repo automatically — commit it from there.
+HOME_DIRS=(.scripts .claude/skills)
 
 link_one() { # link_one <repo-relative-path>  ->  ~/<same-path>
   local rel="$1" src="$REPO/$1" dst="$HOME/$1"
