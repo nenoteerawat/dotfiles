@@ -63,15 +63,26 @@ Write the current task's spec to `.task-spec.md` at the **target repo root**. Sp
 
 From the target repo root, run via Bash with `run_in_background: true` (Devstral decodes ~21 tok/s, so nontrivial tasks exceed the 10-minute foreground cap):
 
+Every run goes through the **status wrapper** so the run is observable (statusline `impl` segment, `cc-impl-status`, tmux `prefix+o`, and your own narration all read its files). Substitute `MODEL` (`devstral`|`qwen`), `TASK_LABEL` (short human label, chars `[A-Za-z0-9 ._-]` only), `ROUND` (1–3), and add the `-m` flag only for qwen:
+
 ```bash
-opencode run --agent implement "$(cat .task-spec.md)"
-# qwen variant:
-opencode run --agent implement -m ollama/qwen3.6-35b-a3b "$(cat .task-spec.md)"
+root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+IMPL_DIR="$HOME/.claude/cache/impl/$(printf '%s' "$root" | md5sum | cut -c1-8)"
+mkdir -p "$IMPL_DIR"
+printf 'pid=%s\nstarted=%s\nmodel=%s\ntask=%s\nround=%s\nrepo=%s\n' \
+  "$$" "$(date +%s)" "MODEL" "TASK_LABEL" "ROUND" "$root" > "$IMPL_DIR/state"
+set -o pipefail
+opencode run --agent implement "$(cat .task-spec.md)" 2>&1 | tee "$IMPL_DIR/run.log"
+ec=$?
+printf 'ended=%s\nexit=%s\n' "$(date +%s)" "$ec" >> "$IMPL_DIR/state"
+exit "$ec"
 ```
+
+(`pipefail` keeps the exit code truthful through the `tee`; the `ended=`/`exit=` append happens even while you sleep, so the files are always self-describing. Each round rewrites `state` and truncates `run.log`. If `md5sum` is missing, fall back to running `opencode run` bare — observability is optional, the run is not.)
 
 **No permission-bypass flag** — the `implement` agent profile in `~/.config/opencode/opencode.json` has no "ask" rules: bash is default-allow with destructive/exfil commands (`sudo`, `rm -rf`, `git commit/push`, `curl`, cloud-CLI deletes, …) hard-denied, so headless runs are prompt-free by construction. Denials don't stall the run — the model is told and continues. If a run ever does stall on an unexpected permission, that's a profile gap: kill it, surface it to the user, don't bypass it.
 
-Wait for the run to exit. If it is still running after ~30 minutes, kill it and treat the round as failed. Note: the first run after ~5 min idle pays a one-time ~8 s model load.
+**While it runs, narrate.** Don't wait silently: check the run every ~2–3 minutes (Monitor with a ~150 s timeout, or equivalent short waits). Each wake, read the fresh tail of `"$IMPL_DIR/run.log"`, strip ANSI escapes (`sed -E $'s/\\x1b\\[[0-9;]*[A-Za-z]//g'`), and post **exactly one line** to the user: elapsed + model + round + latest activity, e.g. `⏱ 6m · devstral r1 — edited src/foo.ts, now running npm test`. If the user asks for status at any point, answer the same way from `state` + the log tail (or run `cc-impl-status`). If it is still running after ~30 minutes, kill it precisely via the wrapper pid from "$IMPL_DIR/state" (pkill -P <that pid> — kills the wrapper's children so the wrapper still appends ended=/exit=); never a machine-global pkill -f 'opencode run' (it would collateral-kill a parallel run in another repo) and never just the wrapper shell (that orphans opencode). Treat the round as failed. Note: the first run after ~5 min idle pays a one-time ~8 s model load. A fresh directory's first run may also stay silent for a minute or two while opencode bootstraps its instance — report the silence honestly rather than treating it as a hang.
 
 ### 4. Review
 

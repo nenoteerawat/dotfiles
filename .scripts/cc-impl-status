@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# cc-impl-status [-f]
+#
+# Status of the local-implementor (OpenCode + Ollama) run for the current repo.
+# Reads the two files the local-implementor skill's run wrapper writes:
+#   ~/.claude/cache/impl/<hash>/state    key=value: pid started model task round repo [ended exit]
+#   ~/.claude/cache/impl/<hash>/run.log  live opencode output stream
+# <hash> = printf '%s' <repo-root> | md5sum | cut -c1-8  — the formula must stay
+# identical to the skill's wrapper and the statusline `impl` segment.
+#
+#   cc-impl-status      one-shot status + last 15 log lines
+#   cc-impl-status -f   follow the live log (used by the tmux prefix+o popup)
+#
+# Also usable from a Claude Code chat as `! cc-impl-status`.
+set -u
+
+root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+if ! command -v md5sum >/dev/null 2>&1; then
+  echo "cc-impl-status: md5sum not found (brew install coreutils)"; exit 1
+fi
+hash=$(printf '%s' "$root" | md5sum | cut -c1-8)
+dir="$HOME/.claude/cache/impl/$hash"
+state="$dir/state"
+log="$dir/run.log"
+
+if [[ "${1:-}" == "-f" ]]; then
+  # popup mode: message instead of flashing closed when there is no log yet
+  [[ -f "$log" ]] || { echo "no run log yet for $root"; echo "(looked at $log)"; exit 1; }
+  exec tail -f "$log"
+fi
+
+if [[ ! -f "$state" ]]; then
+  echo "no managed run for $root"
+  if pgrep -fl 'opencode run' 2>/dev/null; then
+    echo "(unmanaged opencode run above — started outside the local-implementor skill)"
+  fi
+  command -v ollama >/dev/null 2>&1 && ollama ps 2>/dev/null
+  exit 0
+fi
+
+pid="" started="" model="" task="" round="" repo="" ended="" exit_code=""
+while IFS='=' read -r k v || [[ -n "$k" ]]; do
+  case "$k" in
+    pid) pid=$v ;; started) started=$v ;; model) model=$v ;;
+    task) task=$v ;; round) round=$v ;; repo) repo=$v ;;
+    ended) ended=$v ;; exit) exit_code=$v ;;
+  esac
+done < "$state"
+
+now=$(date +%s)
+[[ "$started" =~ ^[0-9]+$ ]] || started=$now
+mins=$(( (now - started) / 60 ))
+
+if [[ -z "$exit_code" ]]; then
+  if [[ "$pid" =~ ^[0-9]+$ && "$pid" -gt 0 ]] && kill -0 "$pid" 2>/dev/null; then
+    echo "RUNNING   ${mins}m elapsed · $model · round $round — $task"
+  else
+    echo "STALE     state says running but pid ${pid:-?} is dead — run died mid-flight"
+  fi
+else
+  ago=""
+  [[ "$ended" =~ ^[0-9]+$ ]] && ago=", $(( (now - ended) / 60 ))m ago"
+  echo "FINISHED  exit $exit_code$ago · $model · round $round — $task"
+fi
+echo "--- last 15 log lines ($log) ---"
+tail -15 "$log" 2>/dev/null || echo "(no log)"
