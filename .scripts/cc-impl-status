@@ -40,7 +40,7 @@ if [[ ! -f "$state" ]]; then
 fi
 
 pid="" started="" model="" task="" round="" repo="" ended="" exit_code=""
-while IFS='=' read -r k v; do
+while IFS='=' read -r k v || [[ -n "$k" ]]; do
   case "$k" in
     pid) pid=$v ;; started) started=$v ;; model) model=$v ;;
     task) task=$v ;; round) round=$v ;; repo) repo=$v ;;

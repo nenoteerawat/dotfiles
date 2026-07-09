@@ -198,7 +198,7 @@ if [[ -d "$HOME/.claude/cache/impl" && -n "$cwd" && -d "$cwd" ]] \
   impl_state="$HOME/.claude/cache/impl/$(printf '%s' "$impl_root" | md5sum | cut -c1-8)/state"
   if [[ -f "$impl_state" ]]; then
     impl_pid="" impl_started="" impl_round="" impl_exit=""
-    while IFS='=' read -r k v; do
+    while IFS='=' read -r k v || [[ -n "$k" ]]; do
       case "$k" in
         pid) impl_pid=$v ;; started) impl_started=$v ;;
         round) impl_round=$v ;; exit) impl_exit=$v ;;
