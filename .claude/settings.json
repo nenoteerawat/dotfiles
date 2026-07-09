@@ -47,6 +47,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.scripts/cc-plan-handoff"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",

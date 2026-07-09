@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# cc-plan-handoff — PostToolUse hook (matcher: ExitPlanMode), registered in .claude/settings.json.
+# After the user approves a plan, tell Claude to offer the local-model handoff
+# ("automode"): an AskUserQuestion picker — Devstral / Qwen / Claude — that feeds
+# the local-implementor skill. Silent no-op on machines without the local AI
+# stack (install.sh --with-localai), so the tracked hook is safe everywhere.
+set -euo pipefail
+
+input=$(cat 2>/dev/null || true)
+
+# Offer only where the implementor can actually run (binary checks only — never
+# the network; this runs on every plan approval).
+command -v opencode >/dev/null 2>&1 || exit 0
+command -v ollama >/dev/null 2>&1 || exit 0
+
+# PostToolUse fires only when ExitPlanMode succeeds (= plan approved). Belt and
+# braces for phrasing changes: if a rejection message still reaches us, stay
+# silent. Narrow patterns only — the plan text itself may contain "reject".
+if command -v jq >/dev/null 2>&1 && [ -n "$input" ]; then
+  if printf '%s' "$input" | jq -e '(.tool_response // empty) | tostring | test("doesn.t want to proceed|user rejected|rejected the plan"; "i")' >/dev/null 2>&1; then
+    exit 0
+  fi
+fi
+
+cat <<'EOF'
+{"suppressOutput": true, "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "Automode (user's standing preference, injected by the cc-plan-handoff hook): the plan was just approved and this machine has the local AI implementor (OpenCode + Ollama). Do not start implementing yet. Unless the user already picked an implementor while planning (said devstral, qwen, or explicitly asked Claude to implement it), first ask with AskUserQuestion — question: 'Who should implement this plan?', header: 'Implementor', options: 'Devstral (local) (Recommended)' — default local model, zero API cost; 'Qwen (local)' — benchmark challenger, faster but less proven; 'Claude' — implement directly. If Devstral or Qwen is chosen, invoke the local-implementor skill and follow it with that model. If Claude is chosen, implement the plan normally. If you are a subagent, or the plan was not actually approved, ignore this note."}}
+EOF
