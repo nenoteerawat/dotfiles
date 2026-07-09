@@ -184,6 +184,36 @@ if (( added > 0 || removed > 0 )); then
   (( removed > 0 )) && out+="${C_RED}-${removed}${R}"
 fi
 
+# --- local-implementor run: "impl ●7m r2" while an opencode run is active ---
+# One thin reader of the state file the local-implementor skill writes (the
+# others: ~/.scripts/cc-impl-status, the tmux prefix+o popup). Hash formula
+# must stay identical everywhere: printf repo-root (no newline) | md5sum.
+# Self-hides when: ~/.claude/cache/impl absent (machine never ran the flow),
+# md5sum missing, state has exit=, or the pid is dead (crashed run -> stale-
+# invisible; a recycled pid can briefly false-positive - accepted).
+if [[ -d "$HOME/.claude/cache/impl" && -n "$cwd" && -d "$cwd" ]] \
+   && command -v md5sum >/dev/null 2>&1; then
+  impl_root=$(git -C "$cwd" --no-optional-locks rev-parse --show-toplevel 2>/dev/null)
+  [[ -z "$impl_root" ]] && impl_root="$cwd"
+  impl_state="$HOME/.claude/cache/impl/$(printf '%s' "$impl_root" | md5sum | cut -c1-8)/state"
+  if [[ -f "$impl_state" ]]; then
+    impl_pid="" impl_started="" impl_round="" impl_exit=""
+    while IFS='=' read -r k v; do
+      case "$k" in
+        pid) impl_pid=$v ;; started) impl_started=$v ;;
+        round) impl_round=$v ;; exit) impl_exit=$v ;;
+      esac
+    done < "$impl_state"
+    if [[ -z "$impl_exit" && "$impl_pid" =~ ^[0-9]+$ && "$impl_pid" -gt 0 ]] \
+       && kill -0 "$impl_pid" 2>/dev/null; then
+      impl_m=0
+      [[ "$impl_started" =~ ^[0-9]+$ ]] && impl_m=$(( ($(date +%s) - impl_started) / 60 ))
+      out+="${SEP}${C_DIM}impl ${R}${C_GRN}●${R}${C_FG}${impl_m}m${R}"
+      [[ "$impl_round" =~ ^[0-9]+$ ]] && out+="${C_DIM} r${impl_round}${R}"
+    fi
+  fi
+fi
+
 # --- work daily spend: local ledger + "day $X/$Y" segment ---
 # (auth-state detection is up top, before segment assembly)
 # Ledger: one file per session per local day, cumulative session cost,
