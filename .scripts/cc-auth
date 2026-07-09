@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cc-auth [work|personal|status|strip-global] [project-dir]
+# cc-auth [work [--daily-budget N]|personal|status|strip-global] [project-dir]
 #
 # Option-B per-project Claude Code auth switch. Confines the work API
 # credentials (key + AWS external-Anthropic gateway base URL + workspace
@@ -7,7 +7,12 @@
 # talks to the work gateway; every other repo falls back to your Claude.ai
 # subscription (the global default).
 #
-#   work          stamp the work env block into <dir>/.claude/settings.local.json
+#   work          stamp the work env block into <dir>/.claude/settings.local.json.
+#                 --daily-budget N (or a bare number: `cc-auth work 50`) first sets
+#                 WORK_DAILY_BUDGET — the $N/day cap enforced by the cc-work-limit
+#                 hook and shown by the statusline `day` segment — in
+#                 ~/.claude/work-auth.json as the GLOBAL work default (0 = disable);
+#                 every future stamp in any repo inherits it
 #   personal      strip the work env keys from that file (-> subscription default)
 #   status        report what <dir> and the global settings currently use
 #   strip-global  one-time: remove the work env block from ~/.claude/settings.local.json
@@ -42,9 +47,35 @@ die() { printf 'cc-auth: %s\n' "$*" >&2; exit 1; }
 command -v jq >/dev/null 2>&1 || die "jq is required"
 
 cmd="${1:-status}"
+(( $# > 0 )) && shift
+
+# remaining args: --daily-budget N (or a bare number) sets the work daily
+# budget; anything else is the project dir. A real dir is never purely numeric.
+budget="" dir=""
+while (( $# > 0 )); do
+  case "$1" in
+    --daily-budget)
+      (( $# >= 2 )) || die "--daily-budget needs a value"
+      budget="$2"; shift 2 ;;
+    --daily-budget=*)
+      budget="${1#*=}"; shift ;;
+    *)
+      if [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+        budget="$1"
+      else
+        [[ -z "$dir" ]] || die "unexpected argument: $1"
+        dir="$1"
+      fi
+      shift ;;
+  esac
+done
+if [[ -n "$budget" ]]; then
+  [[ "$budget" =~ ^[0-9]+(\.[0-9]+)?$ ]] \
+    || die "invalid daily budget: '$budget' (must be a number in USD; 0 disables enforcement)"
+  [[ "$cmd" == "work" ]] || die "--daily-budget only applies to 'work'"
+fi
 
 # resolve project dir: explicit arg, else git toplevel, else cwd
-dir="${2:-}"
 if [[ -z "$dir" ]]; then
   dir="$(git rev-parse --show-toplevel 2>/dev/null)"
   [[ -n "$dir" ]] || dir="$PWD"
@@ -95,6 +126,11 @@ has_work_keys() {  # $1=file  $2=all|any
 case "$cmd" in
   work)
     require_secret
+    if [[ -n "$budget" ]]; then
+      # string value: the Claude Code env block is all-strings by convention
+      jq --arg b "$budget" '.WORK_DAILY_BUDGET = $b' "$secret" | write_json "$secret"
+      echo "daily budget → \$$budget/day (global work default in $secret — every stamp inherits it)"
+    fi
     if jq -e '[.[] | strings | select(test("REPLACE"))] | length > 0' "$secret" >/dev/null 2>&1; then
       die "$secret still has REPLACE placeholders — fill in the real work key/workspace id first"
     fi
@@ -149,15 +185,28 @@ case "$cmd" in
     else
       echo "  global default: Claude.ai subscription"
     fi
-    [[ -f "$secret" ]] || echo "  (no $secret yet — 'work' needs it)"
+    if [[ -f "$secret" ]]; then
+      gb=$(jq -r '.WORK_DAILY_BUDGET // empty' "$secret" 2>/dev/null)
+      if [[ -n "$gb" ]]; then
+        echo "  work daily budget: \$$gb/day (global default; 0 = enforcement disabled)"
+      else
+        echo "  work daily budget: unset → default \$100/day (set: cc-auth work --daily-budget N)"
+      fi
+      rb=$(jq -r '.env.WORK_DAILY_BUDGET // empty' "$settings" 2>/dev/null)
+      if [[ -n "$rb" && "$rb" != "$gb" ]]; then
+        echo "    ⚠ repo stamped with \$$rb/day — re-run 'cc-auth work' to sync"
+      fi
+    else
+      echo "  (no $secret yet — 'work' needs it)"
+    fi
     ;;
 
   -h|--help)
-    sed -n '2,35p' "$0"
+    sed -n '2,40p' "$0"
     ;;
 
   *)
-    echo "usage: cc-auth [work|personal|status|strip-global] [project-dir]" >&2
+    echo "usage: cc-auth [work [--daily-budget N]|personal|status|strip-global] [project-dir]" >&2
     exit 2
     ;;
 esac

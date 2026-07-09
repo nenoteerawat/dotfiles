@@ -79,6 +79,26 @@ if [[ "$remote" == *github.com-pttep* || "$remote" == *pttep-pcl* || "$remote" =
   badge="${C_YEL} work${R}"
 fi
 
+# --- work/personal auth state (drives day/acct vs lim segments below) ---
+# A session bills the work API iff ANTHROPIC_API_KEY is present — cc-auth work
+# stamps it into the repo's .claude/settings.local.json env block and Claude
+# Code injects that block into the process env, which this subprocess inherits.
+# Fallback (env injection unavailable): check key PRESENCE in that file via jq.
+# The key's value is never stored or used here — presence only.
+is_work_billed=0
+day_budget="${WORK_DAILY_BUDGET:-}"
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+  is_work_billed=1
+elif [[ -n "$cwd" && -d "$cwd" ]]; then
+  top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
+  slj="$top/.claude/settings.local.json"
+  if [[ -n "$top" && -f "$slj" ]] \
+     && jq -e '.env.ANTHROPIC_API_KEY != null' "$slj" >/dev/null 2>&1; then
+    is_work_billed=1
+    [[ -z "$day_budget" ]] && day_budget=$(jq -r '.env.WORK_DAILY_BUDGET // empty' "$slj" 2>/dev/null)
+  fi
+fi
+
 # ================= assemble single flat line =================
 out="${C_BLUE}${model}${R}"
 
@@ -110,6 +130,41 @@ if [[ -n "$ctx_pct" && "$ctx_pct" != "null" ]]; then
   out+="${SEP}${C_DIM} ${lbl} ${R}${cc}${pct}%${R}"
 fi
 
+# --- subscription usage limits: "lim 5h X% · 7d Y%" (personal sessions) ---
+# The work counterpart is day/acct below. rate_limits arrives on stdin for
+# Pro/Max subscribers after the first API response — no network, no tokens.
+# Rendered generically over whatever windows are present, so a future third
+# window (e.g. the 7-day Opus limit /usage shows) appears without edits.
+# A window >=70% also shows its reset (5h -> local HH:MM, weekly -> weekday).
+if (( ! is_work_billed )); then
+  lim_rows=$(get '.rate_limits // {} | to_entries
+    | sort_by(.key | if .=="five_hour" then 0 elif .=="seven_day" then 1 else 2 end)
+    | .[] | [.key, (.value.used_percentage? // ""), (.value.resets_at? // 0)] | @tsv')
+  lim=""
+  while IFS=$'\t' read -r k p rs; do
+    [[ "$p" =~ ^[0-9]+(\.[0-9]+)?$ ]] || continue
+    pct=$(printf '%.0f' "$p" 2>/dev/null) || continue
+    case "$k" in
+      five_hour)      lbl="5h" ;;
+      seven_day)      lbl="7d" ;;
+      seven_day_opus) lbl="7d·op" ;;
+      *)              lbl="$k" ;;
+    esac
+    lc="$C_FG"
+    (( pct >= 70 )) && lc="$C_YEL"
+    (( pct >= 90 )) && lc="$C_BRED"
+    reset=""
+    if (( pct >= 70 )) && [[ "$rs" =~ ^[0-9]+$ && "$rs" -gt 0 ]]; then
+      [[ "$k" == "five_hour" ]] && fmt="+%H:%M" || fmt="+%a"
+      reset=$(date -r "$rs" "$fmt" 2>/dev/null)
+      [[ -n "$reset" ]] && reset="${C_DIM}→${reset}${R}"
+    fi
+    [[ -n "$lim" ]] && lim+="${C_DIM} · ${R}"
+    lim+="${C_DIM}${lbl} ${R}${lc}${pct}%${R}${reset}"
+  done <<< "$lim_rows"
+  [[ -n "$lim" ]] && out+="${SEP}${C_DIM}lim ${R}${lim}"
+fi
+
 # --- session cost ---
 if awk "BEGIN{exit !(($cost)+0 > 0)}" 2>/dev/null; then
   costc="$C_FG"
@@ -130,28 +185,10 @@ if (( added > 0 || removed > 0 )); then
 fi
 
 # --- work daily spend: local ledger + "day $X/$Y" segment ---
-# A session bills the work API iff ANTHROPIC_API_KEY is present — cc-auth work
-# stamps it into the repo's .claude/settings.local.json env block and Claude
-# Code injects that block into the process env, which this subprocess inherits.
-# Fallback (env injection unavailable): check key PRESENCE in that file via jq.
-# The key's value is never stored or used here — presence only.
+# (auth-state detection is up top, before segment assembly)
 # Ledger: one file per session per local day, cumulative session cost,
 # monotonic writes -> concurrent sessions never race. cc-work-limit (the
 # enforcement hook) reads the same ledger and prunes old days.
-is_work_billed=0
-day_budget="${WORK_DAILY_BUDGET:-}"
-if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-  is_work_billed=1
-elif [[ -n "$cwd" && -d "$cwd" ]]; then
-  top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
-  slj="$top/.claude/settings.local.json"
-  if [[ -n "$top" && -f "$slj" ]] \
-     && jq -e '.env.ANTHROPIC_API_KEY != null' "$slj" >/dev/null 2>&1; then
-    is_work_billed=1
-    [[ -z "$day_budget" ]] && day_budget=$(jq -r '.env.WORK_DAILY_BUDGET // empty' "$slj" 2>/dev/null)
-  fi
-fi
-
 if (( is_work_billed )); then
   # default 100 protects work repos stamped before WORK_DAILY_BUDGET existed
   [[ "$day_budget" =~ ^[0-9]+(\.[0-9]+)?$ ]] || day_budget=100
