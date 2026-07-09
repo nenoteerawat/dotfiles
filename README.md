@@ -274,6 +274,7 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 |--------|-------------|
 | `.macos` | Configure macOS system defaults |
 | `.scripts/ide` | Create tmux IDE split layout |
+| `.scripts/cc-plan-handoff` | Claude Code hook — offers the Devstral/Qwen/Claude handoff right after you approve a plan (automode) |
 | `update_sudo_tid.sh` | Enable TouchID for sudo (with pam_reattach for tmux) |
 
 ## Other Config Files
@@ -325,6 +326,7 @@ git diff          # good?  commit with `git cz`
 - **One model, no flags** — `opencode run` uses Devstral by default; Qwen only loads if you pass `-m ollama/qwen3.6-35b-a3b`.
 - **Never auto-commits** — the diff always waits for your review.
 - **Local + free** after the design step.
+- **Automode** — the `cc-plan-handoff` hook (tracked in `.claude/settings.json`) makes step 2 hands-free inside Claude Code: approving a plan automatically offers the handoff with a **Devstral / Qwen / Claude** picker — no trigger phrase needed. Pick Claude to implement normally; machines without the local stack never see the offer.
 
 ### Managing the runtime
 

@@ -1,6 +1,6 @@
 ---
 name: local-implementor
-description: Use when the user wants an agreed implementation plan executed by the local model (OpenCode + Ollama, zero API cost) — "let devstral implement" / "yes let devstral implement" / "let qwen implement" / "implement with devstral" / "implement with qwen" / "implement with the local model" / "delegate to local model", or plain "implement" after a plan has been agreed in chat.
+description: Use when the user wants an agreed implementation plan executed by the local model (OpenCode + Ollama, zero API cost) — "let devstral implement" / "yes let devstral implement" / "let qwen implement" / "implement with devstral" / "implement with qwen" / "implement with the local model" / "delegate to local model", plain "implement" after a plan has been agreed in chat, or when the cc-plan-handoff hook injects its automode note right after the user approves a plan.
 ---
 
 # local-implementor — delegate implementation to a local model
@@ -18,6 +18,16 @@ Pick the model from the user's words:
 
 - **"devstral"** or no model named → Devstral (the default; no `-m` flag).
 - **"qwen"** → Qwen: append `-m ollama/qwen3.6-35b-a3b` to the run command. First check it exists (`ollama ls | grep -i qwen3.6`); if missing, tell the user it must be built from the downloaded blob via a Modelfile (see the dotfiles CLAUDE.md "Local AI coding implementor" section — a direct hf.co pull 400s on import) and ask whether to fall back to Devstral. **Backend caveat:** Qwen tool-call failures under Ollama are usually the serving/template layer, not the model (stripped chat templates, Hermes-JSON-vs-XML mis-wiring; version-sensitive) — if a Qwen run ends with no file edits or tool-call parse errors, diagnose it as a backend problem: fall back to Devstral for the task and tell the user, don't burn fix rounds re-prompting Qwen.
+
+## Automode entry (plan approval)
+
+The `cc-plan-handoff` hook (PostToolUse on `ExitPlanMode`, registered in the tracked `.claude/settings.json`) injects an automode note the moment the user approves a plan — that note triggers this skill exactly like the phrases above. When it appears:
+
+- The user already picked an implementor while planning (named devstral or qwen, or asked Claude to implement) → skip the question and honor that choice.
+- Otherwise ask with AskUserQuestion — question: "Who should implement this plan?", header "Implementor", options: **Devstral (local) (Recommended)**, **Qwen (local)**, **Claude** (implement directly).
+- Devstral or Qwen chosen → continue with this skill exactly as if the user had said "let <model> implement".
+- Claude chosen → this skill ends here; implement the plan normally.
+- The hook fires only on machines with the local stack installed, but preflight (below) still applies — on preflight failure follow its remedy path, never silently fall back.
 
 ## Procedure
 
