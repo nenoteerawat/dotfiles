@@ -4,18 +4,69 @@
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "Ollama (local)",
-      "options": { "baseURL": "http://localhost:11434/v1" },
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
       "models": {
-        "devstral-small-2:24b": { "name": "Devstral Small 2 24B (local)" },
-        "qwen3.6-35b-a3b": { "name": "Qwen3.6 35B A3B (local, benchmark challenger)" }
+        "devstral-small-2:24b": {
+          "name": "Devstral Small 2 24B (local)"
+        },
+        "qwen3.6-35b-a3b": {
+          "name": "Qwen3.6 35B A3B (local, benchmark challenger)"
+        }
       }
     }
   },
   "model": "ollama/devstral-small-2:24b",
-  "permission": { "edit": "allow", "bash": "ask", "webfetch": "deny" },
+  "permission": {
+    "edit": "allow",
+    "bash": "ask",
+    "webfetch": "deny"
+  },
   "agent": {
     "implement": {
       "description": "Unattended local implementor (local-implementor skill) — bash allowed except destructive/exfil commands",
+      "permission": {
+        "bash": {
+          "*": "allow",
+          "sudo *": "deny",
+          "rm -rf*": "deny",
+          "rm -fr*": "deny",
+          "git push*": "deny",
+          "git commit*": "deny",
+          "git reset*": "deny",
+          "git clean*": "deny",
+          "curl*": "deny",
+          "wget*": "deny",
+          "ssh *": "deny",
+          "scp *": "deny",
+          "npm publish*": "deny",
+          "kubectl delete*": "deny",
+          "kubectl drain*": "deny",
+          "kubectl cordon*": "deny",
+          "kubectl taint*": "deny",
+          "kubectl replace*": "deny",
+          "kubectl patch*": "deny",
+          "kubectl scale*": "deny",
+          "kubectl apply*": "deny",
+          "kubectl exec*": "deny",
+          "gcloud *delete*": "deny",
+          "gcloud *destroy*": "deny",
+          "gcloud *remove*": "deny",
+          "aws *delete*": "deny",
+          "aws *terminate*": "deny",
+          "aws *remove*": "deny",
+          "aws s3 rm*": "deny",
+          "aws s3 rb*": "deny",
+          "gh *delete*": "deny",
+          "gh pr merge*": "deny",
+          "gh secret *": "deny",
+          "gh auth *": "deny"
+        }
+      }
+    },
+    "explore": {
+      "description": "Read-oriented explorer for unattended runs - same guarded bash rules as implement",
       "permission": {
         "bash": {
           "*": "allow",

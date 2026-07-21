@@ -7,36 +7,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/.config/tmux/plugins/tmux-claude-session-manager/scripts/state.sh working"
-          },
-          {
-            "type": "command",
             "command": "$HOME/.scripts/cc-work-limit"
           }
         ]
       }
     ],
-    "Notification": [
-      {
-        "matcher": "permission_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.config/tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
-      {
-        "matcher": "AskUserQuestion",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.config/tmux/plugins/tmux-claude-session-manager/scripts/state.sh waiting"
-          }
-        ]
-      },
       {
         "matcher": "*",
         "hooks": [
@@ -57,17 +33,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.config/tmux/plugins/tmux-claude-session-manager/scripts/state.sh idle"
-          }
-        ]
-      }
     ]
   },
   "enableWorkflows": true,
@@ -85,7 +50,8 @@
     "exa@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": true,
     "andrej-karpathy-skills@karpathy-skills": true,
-    "typescript-lsp@claude-plugins-official": true
+    "typescript-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "karpathy-skills": {
