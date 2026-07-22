@@ -19,6 +19,9 @@
         },
         "kimi-k2.7-code:cloud": {
           "name": "Kimi K2.7 Code (Ollama Cloud — coding-focused agentic)"
+        },
+        "deepseek-v4-flash:cloud": {
+          "name": "DeepSeek V4 Flash (Ollama Cloud — fast cross-family reviewer)"
         }
       }
     }

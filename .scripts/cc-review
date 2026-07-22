@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cc-review [-l] [-m FOCUS] [TARGET]
+# cc-review [-l|-d] [-m FOCUS] [TARGET]
 #
 # On-demand code review by a STRONGER Ollama model (GLM-5.2 cloud), zero
 # Anthropic API cost. Pointed at the local Ollama OpenAI-compatible endpoint.
@@ -10,6 +10,8 @@
 #   -m FOCUS one-line focus (e.g. -m "is the locking correct?")
 #   -l       use the LOCAL model (devstral-small-2:24b) — free fallback when
 #            GLM cloud quota is exhausted (weaker review)
+#   -d       use deepseek-v4-flash:cloud — fast cross-family second opinion
+#            (different lineage than GLM/Kimi, so fewer shared blind spots)
 #   -h       help
 #
 # Needs Ollama running (brew services start ollama); for the default cloud
@@ -22,9 +24,10 @@ die() { printf 'cc-review: %s\n' "$*" >&2; exit 1; }
 command -v jq   >/dev/null 2>&1 || die "jq is required"
 command -v curl >/dev/null 2>&1 || die "curl is required"
 
-while getopts ':lm:h' opt; do
+while getopts ':ldm:h' opt; do
   case "$opt" in
     l) model="devstral-small-2:24b" ;;
+    d) model="deepseek-v4-flash:cloud" ;;
     m) focus="$OPTARG" ;;
     h) awk 'NR==1{next} /^set -u/{exit} {print}' "$0"; exit 0 ;;
     :) die "option -$OPTARG needs a value" ;;
