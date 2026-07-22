@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# cc-review [-l] [-m FOCUS] [TARGET]
+#
+# On-demand code review by a STRONGER Ollama model (GLM-5.2 cloud), zero
+# Anthropic API cost. Pointed at the local Ollama OpenAI-compatible endpoint.
+# Use in the interactive path when a local model gets stuck or you want a
+# second opinion.
+#
+#   TARGET:  (none) → `git diff HEAD`;  a path → that file;  - → stdin
+#   -m FOCUS one-line focus (e.g. -m "is the locking correct?")
+#   -l       use the LOCAL model (devstral-small-2:24b) — free fallback when
+#            GLM cloud quota is exhausted (weaker review)
+#   -h       help
+#
+# Needs Ollama running (brew services start ollama); for the default cloud
+# reviewer also `ollama signin` + an Ollama Cloud Pro plan. No API key.
+set -u
+
+endpoint="http://localhost:11434/v1/chat/completions"
+model="glm-5.2:cloud"; focus=""
+die() { printf 'cc-review: %s\n' "$*" >&2; exit 1; }
+command -v jq   >/dev/null 2>&1 || die "jq is required"
+command -v curl >/dev/null 2>&1 || die "curl is required"
+
+while getopts ':lm:h' opt; do
+  case "$opt" in
+    l) model="devstral-small-2:24b" ;;
+    m) focus="$OPTARG" ;;
+    h) awk 'NR==1{next} /^set -u/{exit} {print}' "$0"; exit 0 ;;
+    :) die "option -$OPTARG needs a value" ;;
+    *) die "unknown option -$OPTARG (try -h)" ;;
+  esac
+done
+shift $((OPTIND - 1)); target="${1:-}"
+
+curl -sf --max-time 2 http://localhost:11434/api/version >/dev/null 2>&1 \
+  || die "Ollama not reachable — run: brew services start ollama"
+
+if [[ "$target" == "-" ]]; then
+  context="$(cat)"; label="stdin"
+elif [[ -n "$target" ]]; then
+  [[ -f "$target" ]] || die "not a file: $target"
+  context="$(cat -- "$target")"; label="$target"
+else
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "not in a git repo (pass a file or pipe via -)"
+  context="$(git diff HEAD)"; label="git diff HEAD"
+  [[ -n "$context" ]] || die "no working changes to review (git diff HEAD is empty)"
+fi
+
+sys='You are a senior engineer doing a critical code review. Lead with the single most important issue. Point to exact lines/functions. Flag correctness bugs, races, missing boundary error-handling, and security first; style last. If something is fine, say so briefly rather than inventing problems. End with a short prioritized change list.'
+user="Review the following ($label)."
+[[ -n "$focus" ]] && user="$user Focus: $focus."
+user="$user"$'\n\n```\n'"$context"$'\n```'
+
+body="$(jq -n --arg m "$model" --arg s "$sys" --arg u "$user" \
+  '{model:$m, stream:false,
+    messages:[{role:"system",content:$s},{role:"user",content:$u}]}')"
+
+resp="$(curl -sS --max-time 900 "$endpoint" \
+  -H 'content-type: application/json' -H 'authorization: Bearer ollama' \
+  -d "$body")" || die "request failed"
+
+err="$(printf '%s' "$resp" | jq -r '.error.message // .error // empty')"
+if [[ -n "$err" ]]; then
+  [[ "$model" == *:cloud ]] && err="$err  (cloud model — check 'ollama signin' / Pro quota, or retry with -l for the local reviewer)"
+  die "Ollama error: $err"
+fi
+
+out="$(printf '%s' "$resp" | jq -r '.choices[0].message.content // empty')"
+[[ -n "$out" ]] || die "empty response from $model"
+printf '%s\n\n— reviewed by %s\n' "$out" "$model"

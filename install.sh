@@ -361,6 +361,15 @@ if [ "$WITH_LOCALAI" = 1 ]; then
       warn "devstral pull failed — run 'ollama pull devstral-small-2:24b-instruct-2512-q8_0' manually"
     fi
     warn "optional challenger (benchmark before making it the default): 'ollama pull hf.co/unsloth/Qwen3.6-35B-A3B-GGUF:Q6_K' downloads the blobs but 400s on import (hf.co-manifest bug); build 'qwen3.6-35b-a3b' from the ~27GB sha256 blob in ~/.ollama/models/blobs via a num_ctx 65536 Modelfile. See CLAUDE.md."
+    # Seed cc-ollama routing in THIS dotfiles repo (per-repo, mirrors cc-auth's stamp
+    # pattern): routes Claude Code's opus/sonnet/haiku/fable aliases to local Ollama
+    # models. Run `cc-ollama on` in other repos to use local models there; `cc-ollama
+    # off` to revert. Refuses if cc-auth work creds are stamped here.
+    if "$REPO/.scripts/cc-ollama" on "$REPO" >/dev/null 2>&1; then
+      ok "cc-ollama on → this repo routes Claude Code to local Ollama models (run 'cc-ollama on' in other repos; 'cc-ollama off' to revert)"
+    else
+      warn "cc-ollama on skipped (cc-auth work creds stamped here? run 'cc-auth personal' first)"
+    fi
   else
     warn "ollama not on PATH after install — re-run, or 'brew install ollama'"
   fi

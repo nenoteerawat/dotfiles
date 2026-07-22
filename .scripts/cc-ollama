@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+# cc-ollama [on|off|status|models|-h] [project-dir]
+#
+# Per-repo Claude Code model switch: point Claude Code at Ollama models for THIS repo
+# only. Stamps an `env` block into <dir>/.claude/settings.local.json that maps the Ollama
+# models onto Claude Code's opus/sonnet/haiku/fable tier aliases (+ one custom picker
+# entry), so `/model` lists them by name and selecting an alias runs the matching Ollama
+# model. Cloud-heavy speed-first mapping (2026-07-22): the sonnet default + opus/fable are
+# glm-5.2:cloud (Ollama Cloud, metered — needs `ollama signin` + Pro); haiku is local
+# qwen3-coder:30b (free offline-fast fallback); custom is kimi-k2.7-code:cloud. The diff
+# is left uncommitted.
+#
+#   on        stamp the Ollama env block into <dir>/.claude/settings.local.json
+#             (idempotent merge; refuses if cc-auth work creds are already stamped — run
+#             `cc-auth personal` first; warns if `ollama` is missing)
+#   off       remove the Ollama env keys from that file (drops .env if empty)
+#             -> back to the subscription/work default
+#   status    report: repo; whether the Ollama env is present + the mapped model IDs;
+#             whether cc-auth work creds are ALSO present (conflict); is `ollama` on
+#             PATH/running; `ollama ls`
+#   models    re-scan `ollama ls`; if all four default models are present, re-stamp the
+#             default block (idempotent refresh); otherwise print `ollama ls` and warn
+#             the set is custom (no auto-assignment)
+#   -h|--help print this header
+#
+# Mirrors .scripts/cc-auth's per-repo env-stamp pattern (atomic write, chmod 600, kept out
+# of git via the repo's LOCAL .git/info/exclude — never the tracked .gitignore). Differences
+# from cc-auth: no secret file (the block is non-secret — a dummy bearer + model IDs +
+# labels); it stamps MODEL routing, not auth; and it refuses to stamp over a repo that
+# already has cc-auth work creds (the two would set conflicting ANTHROPIC_BASE_URLs).
+#
+# Deliberately omitted from the env block:
+#   - ANTHROPIC_DEFAULT_*_SUPPORTED_CAPABILITIES: inert behind a plain ANTHROPIC_BASE_URL
+#     (only effective for CLAUDE_CODE_USE_* providers).
+#   - ANTHROPIC_API_KEY: a dummy value would falsely trigger the statusline's work-billing
+#     detection (it checks ANTHROPIC_API_KEY presence). The dummy ANTHROPIC_AUTH_TOKEN
+#     below is all Ollama needs.
+#   - CLAUDE_CODE_SUBAGENT_MODEL: must stay overridable per prompt.
+#
+# Start a NEW Claude Code session for a change to take effect (env is read at startup).
+#
+# <project-dir> defaults to the git toplevel of the current directory (else cwd).
+set -u
+
+workauth="$HOME/.claude/work-auth.json"   # cc-auth's secret (read-only, conflict check)
+
+die() { printf 'cc-ollama: %s\n' "$*" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || die "jq is required"
+
+cmd="${1:-status}"
+(( $# > 0 )) && shift
+
+dir=""
+while (( $# > 0 )); do
+  [[ -z "$dir" ]] || die "unexpected argument: $1"
+  dir="$1"; shift
+done
+
+if [[ -z "$dir" ]]; then
+  dir="$(git rev-parse --show-toplevel 2>/dev/null)"
+  [[ -n "$dir" ]] || dir="$PWD"
+fi
+[[ -d "$dir" ]] || die "not a directory: $dir"
+settings="$dir/.claude/settings.local.json"
+
+# The env keys this script owns. `off` removes exactly these. Keep in sync with ollama_block.
+OLLAMA_KEYS=(
+  ANTHROPIC_BASE_URL
+  ANTHROPIC_AUTH_TOKEN
+  ANTHROPIC_DEFAULT_OPUS_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL_NAME ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION
+  ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_DEFAULT_SONNET_MODEL_NAME ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION
+  ANTHROPIC_DEFAULT_HAIKU_MODEL ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION
+  ANTHROPIC_DEFAULT_FABLE_MODEL ANTHROPIC_DEFAULT_FABLE_MODEL_NAME ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION
+  ANTHROPIC_CUSTOM_MODEL_OPTION ANTHROPIC_CUSTOM_MODEL_OPTION_NAME ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION
+  CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY
+  CLAUDE_CODE_AUTO_COMPACT_WINDOW
+)
+
+# Local models are verified against `ollama ls`; cloud (:cloud) models are not
+# listed there — they require `ollama signin` (Pro), so they are reported, not grepped.
+LOCAL_MODELS=(devstral-small-2:24b qwen3-coder:30b)
+CLOUD_MODELS=(glm-5.2:cloud kimi-k2.7-code:cloud)
+
+# Emit the Ollama env block as JSON on stdout (reused by `on` and `models`).
+ollama_block() {
+  cat <<'JSON'
+{
+  "ANTHROPIC_BASE_URL": "http://127.0.0.1:11434",
+  "ANTHROPIC_AUTH_TOKEN": "ollama",
+
+  "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-5.2:cloud",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "GLM-5.2 Cloud",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION": "Zhipu GLM-5.2 via Ollama cloud · 1M ctx · tools+thinking",
+
+  "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-5.2:cloud",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME": "GLM-5.2 Cloud (daily default)",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION": "GLM-5.2 via Ollama cloud · speed-first daily default (2026-07-22 smoke test: clean tool-calling, ~3-4× faster than local Devstral)",
+
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL": "qwen3-coder:30b",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME": "Qwen3-Coder 30B A3B (local, fast)",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION": "Qwen3-Coder MoE 30B/3B-active · local · fast decode, fixed tool-calling",
+
+  "ANTHROPIC_DEFAULT_FABLE_MODEL": "glm-5.2:cloud",
+  "ANTHROPIC_DEFAULT_FABLE_MODEL_NAME": "GLM-5.2 Cloud",
+  "ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION": "GLM-5.2 (fable slot; fallback to opus is a no-op — same model)",
+
+  "ANTHROPIC_CUSTOM_MODEL_OPTION": "kimi-k2.7-code:cloud",
+  "ANTHROPIC_CUSTOM_MODEL_OPTION_NAME": "Kimi K2.7-Code (Ollama Cloud)",
+  "ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION": "Coding-specialist cloud backup for when GLM-5.2 is rate-limited",
+
+  "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
+  "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "1000000"
+}
+JSON
+}
+
+ensure_excluded() {
+  local top
+  top="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  git -C "$dir" check-ignore -q .claude/settings.local.json 2>/dev/null && return 0
+  local ex="$top/.git/info/exclude"
+  grep -qxF '.claude/settings.local.json' "$ex" 2>/dev/null \
+    || printf '%s\n' '.claude/settings.local.json' >> "$ex"
+}
+
+write_json() {
+  local target="$1" tmp="$1.tmp.$$"
+  mkdir -p "$(dirname "$target")"
+  cat > "$tmp" || die "write failed: $target"
+  if [[ "$(jq -c . "$tmp" 2>/dev/null)" == "{}" ]]; then
+    rm -f "$tmp" "$target"
+    echo "removed $target (now empty)"
+    return 0
+  fi
+  chmod 600 "$tmp"
+  mv "$tmp" "$target"
+  chmod 600 "$target"
+}
+
+read_or_empty() { [[ -f "$1" ]] && cat "$1" || printf '{}'; }
+
+has_work_keys() {  # $1=file  $2=all|any
+  [[ -f "$1" && -f "$workauth" ]] || return 1
+  jq -e --slurpfile w "$workauth" \
+    "(.env // {}) as \$e | (\$w[0]|keys) as \$ks | $2(\$ks[]; \$e[.] != null)" \
+    "$1" >/dev/null 2>&1
+}
+
+has_ollama_env() {
+  [[ -f "$1" ]] || return 1
+  jq -e '.env.ANTHROPIC_BASE_URL == "http://127.0.0.1:11434"' "$1" >/dev/null 2>&1
+}
+
+case "$cmd" in
+  on)
+    command -v ollama >/dev/null 2>&1 || die "ollama not found on PATH (brew install ollama)"
+    if has_work_keys "$settings" all; then
+      die "this repo already has cc-auth work creds stamped ($settings).
+cc-ollama and cc-auth set conflicting ANTHROPIC_BASE_URLs (work gateway vs Ollama), which
+would send Ollama model IDs to the work gateway. Run 'cc-auth personal' first, then retry."
+    fi
+    ollama_block | jq -e . >/dev/null || die "internal error: Ollama env block is not valid JSON"
+    read_or_empty "$settings" \
+      | jq --slurpfile b <(ollama_block) '.env = ((.env // {}) + $b[0]) | .model = (.model // "sonnet")' \
+      | write_json "$settings"
+    ensure_excluded
+    echo "cc-ollama on → $settings (this repo routes Claude Code to local Ollama)"
+    echo "  • start a NEW Claude Code session for it to take effect (env is read at startup)"
+    echo "  • default model set to sonnet (GLM-5.2 cloud, speed-first); /model lists opus/sonnet/haiku/fable"
+    echo "    (→ glm-5.2:cloud / glm-5.2:cloud / qwen3-coder / glm) + a custom Kimi K2.7-Code cloud row"
+    echo "  • turn off: cc-ollama off"
+    ;;
+
+  off)
+    read_or_empty "$settings" \
+      | jq --argjson keys "$(printf '%s\n' "${OLLAMA_KEYS[@]}" | jq -R . | jq -s .)" '
+          .env = ((.env // {}) | delpaths($keys | map([.])))
+          | if .model == "sonnet" then del(.model) else . end
+          | if (.env | length) == 0 then del(.env) else . end' \
+      | write_json "$settings"
+    echo "cc-ollama off → $dir uses the Claude.ai subscription / work default"
+    ;;
+
+  status)
+    echo "project: $dir"
+    if has_ollama_env "$settings"; then
+      echo "  $settings → Ollama routing ON"
+      echo "    opus  → $(jq -r '.env.ANTHROPIC_DEFAULT_OPUS_MODEL // "?"' "$settings" 2>/dev/null)"
+      echo "    sonnet→ $(jq -r '.env.ANTHROPIC_DEFAULT_SONNET_MODEL // "?"' "$settings" 2>/dev/null)"
+      echo "    haiku → $(jq -r '.env.ANTHROPIC_DEFAULT_HAIKU_MODEL // "?"' "$settings" 2>/dev/null)"
+      echo "    fable → $(jq -r '.env.ANTHROPIC_DEFAULT_FABLE_MODEL // "?"' "$settings" 2>/dev/null)"
+      echo "    custom→ $(jq -r '.env.ANTHROPIC_CUSTOM_MODEL_OPTION // "?"' "$settings" 2>/dev/null)"
+    else
+      echo "  $settings → Ollama routing off (subscription/work default)"
+    fi
+    if has_work_keys "$settings" all; then
+      echo "  ⚠ cc-auth work creds are ALSO stamped here — run 'cc-auth personal' before 'cc-ollama on'"
+    fi
+    if command -v ollama >/dev/null 2>&1; then
+      if curl -sf --max-time 1 http://localhost:11434/api/version >/dev/null 2>&1; then
+        echo "  ollama: running"
+      else
+        echo "  ollama: installed but NOT running (brew services start ollama)"
+      fi
+      echo "  installed models:"
+      ollama ls 2>/dev/null | sed 's/^/    /'
+      echo "  cloud models (need 'ollama signin' + Pro): ${CLOUD_MODELS[*]}"
+    else
+      echo "  ollama: not on PATH"
+    fi
+    ;;
+
+  models)
+    command -v ollama >/dev/null 2>&1 || die "ollama not found on PATH"
+    # bash 3.2 (macOS /bin/bash) has no mapfile; read into a newline-string and grep
+    # against it. `missing` is declared empty, and only `${#missing[@]}` (count, not
+    # value) is used on the empty path — safe under `set -u` on 3.2.
+    models_list="$(ollama ls 2>/dev/null | awk 'NR>1 && NF>0 {print $1}')"
+    missing=()
+    for m in "${LOCAL_MODELS[@]}"; do
+      printf '%s\n' "$models_list" | grep -qxF "$m" || missing+=("$m")
+    done
+    if (( ${#missing[@]} == 0 )); then
+      if has_work_keys "$settings" all; then
+        die "cc-auth work creds are stamped here — run 'cc-auth personal' before re-stamping Ollama"
+      fi
+      read_or_empty "$settings" \
+        | jq --slurpfile b <(ollama_block) '.env = ((.env // {}) + $b[0])' \
+        | write_json "$settings"
+      ensure_excluded
+      echo "cc-ollama models → re-stamped default mapping (all 4 models present) into $settings"
+    else
+      echo "installed models:"; ollama ls 2>/dev/null | sed 's/^/  /'
+      echo "missing local models: ${missing[*]}"
+      echo "the default mapping assumes local: ${LOCAL_MODELS[*]} + cloud: ${CLOUD_MODELS[*]} (via 'ollama signin')"
+      echo "edit ollama_block in this script to map a custom set; not auto-assigning."
+      exit 1
+    fi
+    ;;
+
+  -h|--help)
+    awk 'NR==1{next} /^set -u/{exit} {print}' "$0"
+    ;;
+
+  *)
+    echo "usage: cc-ollama [on|off|status|models|-h] [project-dir]" >&2
+    exit 2
+    ;;
+esac

@@ -13,6 +13,12 @@
         },
         "qwen3.6-35b-a3b": {
           "name": "Qwen3.6 35B A3B (local, benchmark challenger)"
+        },
+        "glm-5.2:cloud": {
+          "name": "GLM-5.2 (Ollama Cloud — hard tier / architect)"
+        },
+        "kimi-k2.7-code:cloud": {
+          "name": "Kimi K2.7 Code (Ollama Cloud — coding-focused agentic)"
         }
       }
     }
