@@ -14,6 +14,7 @@
 #            (different lineage than GLM/Kimi, so fewer shared blind spots)
 #   -k       use kimi-k2.7-code:cloud — equal-speed fallback reviewer when
 #            GLM cloud is down or rate-limited
+#            (-l, -d and -k are mutually exclusive — pick one)
 #   -h       help
 #
 # Needs Ollama running (brew services start ollama); for the default cloud
@@ -21,16 +22,20 @@
 set -u
 
 endpoint="http://localhost:11434/v1/chat/completions"
-model="glm-5.2:cloud"; focus=""
+model="glm-5.2:cloud"; focus=""; model_chosen=""
 die() { printf 'cc-review: %s\n' "$*" >&2; exit 1; }
 command -v jq   >/dev/null 2>&1 || die "jq is required"
 command -v curl >/dev/null 2>&1 || die "curl is required"
+set_model() {
+  [[ -n "$model_chosen" ]] && die "options -l, -d and -k are mutually exclusive (pick one)"
+  model_chosen=1; model="$1"
+}
 
 while getopts ':ldkm:h' opt; do
   case "$opt" in
-    l) model="devstral-small-2:24b" ;;
-    d) model="deepseek-v4-flash:cloud" ;;
-    k) model="kimi-k2.7-code:cloud" ;;
+    l) set_model "devstral-small-2:24b" ;;
+    d) set_model "deepseek-v4-flash:cloud" ;;
+    k) set_model "kimi-k2.7-code:cloud" ;;
     m) focus="$OPTARG" ;;
     h) awk 'NR==1{next} /^set -u/{exit} {print}' "$0"; exit 0 ;;
     :) die "option -$OPTARG needs a value" ;;
