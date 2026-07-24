@@ -115,10 +115,9 @@ Autocompletions are configured for:
 
 ## Fish setup
 
-Fish shell configuration with platform-specific configs (macOS/Linux/Windows).
+Fish shell configuration with platform-specific configs (macOS/Linux/Windows). Note: `install.sh` is zsh-only, so the fish tree is secondary to the primary zsh config.
 
 - [Fish shell](https://fishshell.com/)
-- [Tide](https://github.com/IlanCosman/tide) - Shell theme
 - [Starship](https://starship.rs/) - Prompt
 - [Eza](https://github.com/eza-community/eza) - `ls` replacement (macOS)
 - [fzf](https://github.com/PatrickF1/fzf.fish) - Interactive filtering
@@ -135,7 +134,7 @@ Fish shell configuration with platform-specific configs (macOS/Linux/Windows).
 
 ## tmux setup
 
-tmux configuration with Solarized theme and vi mode.
+tmux configuration themed to the macOS Terminal "Clear Dark" palette (status bar on `bg=default` to inherit the terminal's translucency, matching the nvim tokyonight remap), with vi mode.
 
 - Prefix key: `Ctrl+t`
 - [TPM](https://github.com/tmux-plugins/tpm) - Plugin manager
@@ -146,9 +145,10 @@ tmux configuration with Solarized theme and vi mode.
 | Key | Action |
 |-----|--------|
 | `prefix + r` | Reload tmux config |
-| `prefix + o` | Open current directory in Finder |
 | `prefix + e` | Kill all panes except current |
 | `prefix + g` | Open lazygit in a popup (80% width/height) |
+| `prefix + y` | Open Claude Code in a popup (per-directory session) |
+| `prefix + o` | Popup tailing the live local-implementor run log (`cc-impl-status -f`) |
 | `Ctrl+Shift+Left/Right` | Move window left/right |
 
 ### IDE Layout Script
@@ -165,7 +165,6 @@ Complete shortcut reference for controlling tmux. **Prefix is `Ctrl+t`** (reboun
 |----------|--------|
 | `Ctrl+t` | Prefix key |
 | `prefix + r` | Reload `tmux.conf` |
-| `prefix + o` | Open current pane's directory in Finder |
 | `prefix + e` | Kill all other panes in the current window |
 | `prefix + I` | Install plugins (TPM, first-time only) |
 | `prefix + d` | Detach from session |
@@ -177,6 +176,7 @@ Complete shortcut reference for controlling tmux. **Prefix is `Ctrl+t`** (reboun
 |----------|--------|
 | `prefix + g` | Open **lazygit** in an 80%×80% popup at the pane's cwd |
 | `prefix + y` | Open **Claude Code** in an 80%×80% popup, attached to a per-directory `claude-<hash>` session |
+| `prefix + o` | Tail the live **local-implementor** run log in an 80%×70% popup (`cc-impl-status -f`) |
 
 ### Windows
 
@@ -270,11 +270,19 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 
 ## Scripts
 
+`~/.scripts` is a whole-directory symlink into the repo and is on `$PATH`, so everything below is a bare command from any repo.
+
 | Script | Description |
 |--------|-------------|
 | `.macos` | Configure macOS system defaults |
 | `.scripts/ide` | Create tmux IDE split layout |
+| `.scripts/cc-auth` | Switch Claude Code **credentials** per repo (work API key vs personal subscription) — see [Claude Code](#claude-code) |
+| `.scripts/cc-ollama` | Switch which **models** Claude Code runs per repo — maps the tier aliases onto local/cloud Ollama models — see [Claude Code](#claude-code) |
+| `.scripts/cc-review` | On-demand code review of the working diff by a stronger Ollama model, zero API cost — see [Local AI coding implementor](#local-ai-coding-implementor) |
+| `.scripts/cc-impl-status` | Show the local-implementor run status (RUNNING/STALE/FINISHED + log tail; `-f` follows) |
 | `.scripts/cc-plan-handoff` | Claude Code hook — offers the Devstral/Qwen/Claude handoff right after you approve a plan (automode) |
+| `.scripts/cc-work-limit` | Claude Code hook — enforces the work $100/day cap — see [Claude Code](#claude-code) |
+| `.scripts/cc-credits-refresh` | Background fetch of month-to-date org API spend into the status-line cache |
 | `update_sudo_tid.sh` | Enable TouchID for sudo (with pam_reattach for tmux) |
 
 ## Other Config Files
@@ -285,7 +293,7 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 
 ## Local AI coding implementor
 
-An **architect → implementor** split for offline, zero-cost coding: **Claude Code designs** (plans the change and writes a spec), and a **local open model implements** it (edits your repo autonomously). The diff is left uncommitted so you review before it becomes real. Everything after the design step runs on-device — no internet, no API cost.
+An **architect → implementor** split for zero-Anthropic-API-cost coding: **Claude Code designs** (plans the change and writes a spec), and an **open model implements** it (edits your repo autonomously) — local Devstral by default, with [Ollama Cloud](https://ollama.com/cloud) models as the faster/stronger tier. The diff is left uncommitted so you review before it becomes real. See [`docs/local-ai-implementor.md`](docs/local-ai-implementor.md) for the full mechanics.
 
 Installed on demand (the model pull is ~25 GB, so it's gated behind a flag):
 
@@ -299,12 +307,34 @@ This installs [Ollama](https://ollama.com/) + [OpenCode](https://opencode.ai/), 
 
 | Part | Tool | Role |
 |------|------|------|
-| Runtime | [Ollama](https://ollama.com/) (native, Homebrew) | Serves the model on the GPU (llama.cpp Metal backend) |
+| Runtime | [Ollama](https://ollama.com/) (native, Homebrew) | Serves local models on the GPU (llama.cpp Metal backend) and proxies `:cloud` models |
 | Model | `devstral-small-2:24b` (Mistral Devstral, q8_0) | The implementor — reliable native tool-calling, the default |
 | Harness | [OpenCode](https://opencode.ai/) | Autonomous agent that reads/edits files; **never auto-commits** |
-| Config | `.config/opencode/opencode.json` (tracked + symlinked) | Ollama provider, Devstral default, `permission.edit: allow` |
+| Config | `.config/opencode/opencode.json` (tracked + symlinked) | Ollama provider, Devstral default, `implement`/`explore` agent profiles with a bash deny-list |
 
 An optional benchmark challenger, `qwen3.6-35b-a3b` (Qwen3.6 35B-A3B MoE), can be added by hand — see `CLAUDE.md` for the install (its `ollama pull` 400s on import, so it's built from the downloaded blob instead).
+
+### Ollama Cloud models (optional, Pro plan)
+
+With `ollama signin` + an Ollama Cloud Pro plan ($20/mo, 3 concurrency slots), three smoke-test-validated cloud models sit above the local tier — ~3–4× faster than local Devstral, still zero Anthropic API cost:
+
+| Model | Role |
+|-------|------|
+| `glm-5.2:cloud` | Daily default / architect / reviewer (hard tier) |
+| `kimi-k2.7-code:cloud` | Equal-speed fallback when GLM is down or rate-limited |
+| `deepseek-v4-flash:cloud` | Fast cross-family reviewer (DeepSeek lineage vs Z.ai/Moonshot — fewer shared blind spots) |
+
+All three are declared in `opencode.json`; `cc-ollama on` (see [Claude Code](#claude-code)) additionally maps them onto Claude Code's `/model` picker per repo.
+
+### Code review at zero API cost (`cc-review`)
+
+`cc-review [-l|-d|-k] [-m FOCUS] [TARGET]` pipes `git diff HEAD` (or a file, or stdin with `-`) to a stronger Ollama model and prints the critique — the "second opinion" that replaces a paid advisor:
+
+- default → `glm-5.2:cloud`
+- `-k` → `kimi-k2.7-code:cloud` (equal-speed fallback)
+- `-d` → `deepseek-v4-flash:cloud` (cross-family second opinion)
+- `-l` → local `devstral-small-2:24b` (free fallback, weaker)
+- `-m "is the locking correct?"` adds a one-line focus
 
 ### How to use it — Claude designs, local model implements
 
@@ -326,7 +356,9 @@ git diff          # good?  commit with `git cz`
 - **One model, no flags** — `opencode run` uses Devstral by default; Qwen only loads if you pass `-m ollama/qwen3.6-35b-a3b`.
 - **Never auto-commits** — the diff always waits for your review.
 - **Local + free** after the design step.
-- **Automode** — the `cc-plan-handoff` hook (tracked in `.claude/settings.json`) makes step 2 hands-free inside Claude Code: approving a plan automatically offers the handoff with a **Devstral / Qwen / Claude** picker — no trigger phrase needed. Pick Claude to implement normally; machines without the local stack never see the offer.
+- **Hands-free inside Claude Code** — the `local-implementor` skill (tracked at `.claude/skills/local-implementor/`, synced via the whole-directory symlink) runs the whole loop when you say "let devstral implement" (or just "implement") after agreeing a plan: one task per run, a deterministic scope gate (`git status --porcelain` vs the spec's allow-list), verify commands run by Claude, up to 3 fix rounds, diff left uncommitted for `git cz`.
+- **Automode** — the `cc-plan-handoff` hook (tracked in `.claude/settings.json`) fires the same flow with no trigger phrase: approving a plan automatically offers a **Devstral / Qwen / Claude** picker. Pick Claude to implement normally; machines without the local stack never see the offer.
+- **Watching a run** — `cc-impl-status` (`-f` follows), tmux `prefix+o` popup, or the `impl ●7m r2` status-line segment; state lives in `~/.claude/cache/impl/<hash>/`.
 
 ### Managing the runtime
 
@@ -344,8 +376,9 @@ Measured on an M5 Max (48 GB): ~860 tok/s reading the spec, ~21 tok/s writing co
 
 Configuration for [Claude Code](https://claude.com/claude-code) is tracked and symlinked so it syncs to a fresh machine via `install.sh`. Local state and secrets stay per-machine in the gitignored `~/.claude/settings.local.json`.
 
-- **`.claude/statusline.sh`** — a custom status line ("Beacon"): model name, ghq-shortened `org/repo`, branch + dirty `*` + ahead/behind, a **work** badge for pttep repos, live context-window `%`, session cost, and lines `+/-`. Flat truecolor on the terminal's translucent background — no powerline glyphs. Needs `jq`. Test it with `echo '{...}' | ~/.claude/statusline.sh`.
+- **`.claude/statusline.sh`** — a custom status line ("Beacon"): model name, ghq-shortened `org/repo`, branch + dirty `*` + ahead/behind, a **work** badge for pttep repos, live context-window `%`, session cost, lines `+/-`, and an `impl ●7m r2` segment while a local-implementor run is active. Flat truecolor on the terminal's translucent background — no powerline glyphs. Needs `jq`. Test it with `echo '{...}' | ~/.claude/statusline.sh`.
 - **`.claude/settings.json`** — tracked + symlinked, so theme, hooks, enabled plugins, and the `statusLine` block all sync automatically (no hand-editing on a new machine).
+- **`.claude/skills/`** — tracked skills (currently `local-implementor`), reaching `~/.claude/skills/` via the whole-directory symlink, so they work in every repo and sync to a fresh machine.
 
 ### Work vs personal in the status line
 
@@ -360,11 +393,12 @@ Which account is "active" **follows the auth state** — there is no separate di
 
 So in a personal/subscription session you see no `acct`/`day` segments (and in a personal repo no badge either); in a `cc-auth work`-stamped repo you see all of them. The spend data comes from a non-secret cache (`~/.claude/cache/credits-work.json`) that `cc-credits-refresh` rewrites in the background when it's older than 10 minutes — the status line itself never touches the Admin key or the network.
 
-### Credential & spend scripts (`.scripts/`, on `$PATH`)
+### Credential, model & spend scripts (`.scripts/`, on `$PATH`)
 
 | Script | Description |
 |--------|-------------|
 | `cc-auth [work [--daily-budget N]\|personal\|status]` | Switch which **credentials** Claude Code authenticates with, **per repo** — Claude.ai subscription is the default everywhere; the work API key + gateway are stamped into a single repo's `.claude/settings.local.json` on demand. `--daily-budget N` (or bare `cc-auth work 50`) sets the global `WORK_DAILY_BUDGET` daily cap in `work-auth.json` before stamping (`0` disables enforcement). The status line's spend segments follow this same state automatically. The secret lives only in `~/.claude/work-auth.json` (chmod 600, never committed). |
+| `cc-ollama [on\|off\|status\|models]` | Switch which **models** Claude Code runs, **per repo** (the model-routing twin of `cc-auth`): stamps the tier aliases onto Ollama models so `/model` lists them — opus/fable → `glm-5.2:cloud`, sonnet → `devstral-small-2:24b`, haiku → `qwen3-coder:30b`, custom → `kimi-k2.7-code:cloud` — and sets the repo default to `sonnet` (free/local). All local + zero cost; cannot coexist with `cc-auth work` in the same repo (conflicting `ANTHROPIC_BASE_URL`s). |
 | `cc-credits-refresh [work]` | Fetch month-to-date org API spend (Anthropic Cost API — needs an Admin key) into a non-secret cache the status line reads. |
 | `cc-work-limit` | Claude Code **hook** (auto-registered via the tracked `settings.json`, not a CLI) enforcing the work **$100/day cap**: warns at ≥ 80% of `WORK_DAILY_BUDGET`, blocks new prompts **and denies tool calls** at ≥ 100%. Reads the same local ledger as the `day` segment; personal/subscription sessions are never touched. The budget is one more entry in `~/.claude/work-auth.json`, stamped per-repo by `cc-auth work` (re-run it once in repos stamped earlier); set it to `0` to disable enforcement. |
 

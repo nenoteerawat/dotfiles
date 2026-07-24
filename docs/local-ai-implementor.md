@@ -18,7 +18,15 @@ How the local model is configured on this machine, and how Claude Code hands imp
 | `devstral-small-2:24b` | Default implementor (reliable tool-calling) | automatic — no flag needed |
 | `qwen3.6-35b-a3b` | Benchmark challenger (faster, less proven) | pass `-m ollama/qwen3.6-35b-a3b` |
 
-Both are rebuilt locally with `ollama create <name> -f Modelfile` so the 65536 context is guaranteed.
+Both local models are rebuilt with `ollama create <name> -f Modelfile` so the 65536 context is guaranteed.
+
+**Cloud tier (Ollama Cloud Pro, $20/mo, 3 concurrency slots)** — with `ollama signin`, three smoke-test-validated `:cloud` models run through the same local endpoint, ~3–4× faster than local Devstral, still zero Anthropic API cost:
+
+| Model | Role | How to use |
+|---|---|---|
+| `glm-5.2:cloud` | Architect/reviewer, hard tier — daily default | `cc-review` default; `opus`/`fable` alias via `cc-ollama` |
+| `kimi-k2.7-code:cloud` | Equal-speed fallback when GLM is down/rate-limited | `cc-review -k`; `custom` picker row via `cc-ollama` |
+| `deepseek-v4-flash:cloud` | Fast cross-family reviewer (different lineage → fewer shared blind spots) | `cc-review -d`; OpenCode `-m ollama/deepseek-v4-flash:cloud` |
 
 ### 3. Harness — OpenCode
 
@@ -55,6 +63,10 @@ The hook is a no-op on machines without `opencode` + `ollama` installed, so the 
 - tmux `prefix+o` — popup tailing the live run log.
 - The Claude Code statusline shows `impl ●7m r2` while a run is active.
 - Raw state: `~/.claude/cache/impl/<hash>/` (`state` + `run.log`), kept after the run as a post-mortem.
+
+## Reviewing without a paid advisor (`cc-review`)
+
+The stronger cloud model reviews the weaker implementor's diff, at zero API cost: `cc-review` pipes `git diff HEAD` (or a file, or stdin via `-`) to `glm-5.2:cloud` and prints the critique. Flags: `-k` kimi (equal-speed fallback), `-d` deepseek (cross-family second opinion), `-l` local Devstral (free fallback when cloud quota is exhausted), `-m "focus"` for a one-line focus. This closes the loop: Claude architects, Devstral implements, GLM reviews — no Anthropic API spend anywhere.
 
 ## Safety model
 
