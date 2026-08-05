@@ -88,6 +88,11 @@ Pods/
 # Superpowers plan/spec output — working documents, not repo content
 docs/superpowers/
 
+# dot-agent-deck run state — generated task/report/work-done files, not repo content.
+# Ignored so a `git add -A` can never sweep worker task text into a commit.
+# The `.dot-agent-deck.toml` config itself stays trackable, deliberately.
+.dot-agent-deck/
+
 # Jetbrain tools
 .idea
 
