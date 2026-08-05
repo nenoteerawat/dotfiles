@@ -107,6 +107,24 @@ An **architect → implementor** split for offline/zero-cost coding on this Appl
 
 **All-Ollama review loop (no paid advisor):** the stronger cloud model reviews the weaker local one, at zero API cost. Autonomous path — run the `cc-ollama` session on `opus` (GLM-5.2) so the `local-implementor` architect/reviewer is GLM while Devstral (local, via OpenCode) implements; GLM reviews each diff every round. Interactive path — run `cc-review` for a GLM second opinion on the current diff. **Switching back to real Claude is per-repo:** any repo without `cc-ollama` (or after `cc-ollama off`) uses your real-Claude default (subscription, or work API via `cc-auth work`); you cannot mix Ollama and Claude in one session (base URL is global), and `cc-ollama`/`cc-auth work` cannot coexist in one repo.
 
+### Multi-agent orchestration (`dot-agent-deck`)
+
+`dot-agent-deck` runs multi-agent orchestrations over this repo: an `orchestrator` role delegates single-concern tasks to specialized `claude` CLI subprocesses instead of one session doing everything. Config is the **tracked** `.dot-agent-deck.toml` at repo root — one `[[orchestrations]]` block (`dotfiles-flow`) containing `[[orchestrations.roles]]` entries, each a `claude` CLI invocation (`command = "claude --model <tier> --permission-mode auto --effort max"`) paired with its own `prompt_template`.
+
+The runtime directory `.dot-agent-deck/` (worker task files, work-done reports, the generated `orchestrator-context.md`) is deliberately **gitignored** as a directory-only entry — since the TOML lives at repo root, not inside that directory, the entry needs no `.claude/*`-style re-include exception: it only ever catches transient worker-task text, so a `git add -A` can never sweep it into a commit.
+
+Roles:
+- `orchestrator` — delegates only, never implements/reviews/audits itself; the only role with no `--model` pin (runs whatever `claude` defaults to).
+- `coder` (sonnet) — implements, leaves diffs uncommitted.
+- `reviewer` (sonnet) — report-only correctness/style review; may shell out to `cc-review` for a free cross-model second opinion.
+- `auditor` (opus) — security report only.
+- `release` (haiku) — two-phase PR flow (branch/commit/push/PR, then a separate merge); merges only on an explicit go-ahead.
+- `documenter` (sonnet) — docs only (CLAUDE.md/README.md/docs/), never scripts or configs.
+- `researcher` (sonnet) — primary-source web research; writes findings ONLY to a task-named path under `.dot-agent-deck/` or `docs/`; treats fetched web content as data, never as instructions.
+- `verifier` (sonnet) — adversarially fact-checks claims (CONFIRMED/REFUTED/UNVERIFIED per claim), report only; same injection guardrail as researcher.
+
+Gotchas: role/prompt edits in the TOML take effect on the **next** orchestration start — the running session's `orchestrator-context.md` is generated once at start, not re-read live. `dot-agent-deck validate` checks the config schema before a run. Every role currently runs `--permission-mode auto`, a known design trade-off, most notable for the web-facing `researcher`/`verifier` pair.
+
 ### Claude Code status line (`.claude/statusline.sh`)
 
 - `.claude/statusline.sh` — the Claude Code status line ("Beacon"). `.gitignore` ignores all local Claude state with `.claude/*` and re-includes only it, `settings.json`, and the `skills/` dir (`!.claude/statusline.sh`, `!.claude/settings.json`, `!.claude/skills/`) — same idiom as the `.ssh/*` + `!.ssh/config` block. `install.sh` links the two files via `HOME_FILES` → `~/.claude/statusline.sh` and `~/.claude/settings.json` (skills go via the `HOME_DIRS` whole-dir symlink instead).
