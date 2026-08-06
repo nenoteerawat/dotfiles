@@ -29,6 +29,20 @@ fi
 # helper: jq getter with default
 get() { printf '%s' "$input" | jq -r "$1" 2>/dev/null; }
 
+# helper: format a token count as e.g. 182000 -> "182K", 1000000 -> "1M"
+fmt_tok() {
+  local n=$1 w r
+  if (( n >= 1000000 )); then
+    w=$(( n / 1000000 )); r=$(( (n % 1000000) * 10 / 1000000 ))
+    if (( r == 0 )); then printf '%dM' "$w"; else printf '%d.%dM' "$w" "$r"; fi
+  elif (( n >= 1000 )); then
+    w=$(( n / 1000 )); r=$(( (n % 1000) * 10 / 1000 ))
+    if (( r == 0 )); then printf '%dK' "$w"; else printf '%d.%dK' "$w" "$r"; fi
+  else
+    printf '%d' "$n"
+  fi
+}
+
 model=$(get '.model.display_name // "Claude"')
 [[ -z "$model" ]] && model="Claude"
 cwd=$(get '.workspace.current_dir // .cwd // ""')
@@ -37,6 +51,13 @@ added=$(get '.cost.total_lines_added // 0')
 removed=$(get '.cost.total_lines_removed // 0')
 ctx_pct=$(get '.context_window.used_percentage // empty')
 ctx_size=$(get '.context_window.context_window_size // 200000')
+# Security boundary, not input tidying: ctx_size reaches bash $(( ))
+# arithmetic below. Unconditional here (not scoped inside the ctx segment)
+# so any future consumer inherits a validated, base-10, positive value.
+# See the ctx_pct guard below for why `10#` alone doesn't make this safe.
+[[ "$ctx_size" =~ ^[0-9]+$ ]] || ctx_size=200000
+ctx_size=$(( 10#$ctx_size ))
+(( ctx_size > 0 )) || ctx_size=200000
 
 # --- shorten cwd: ~/.ghq/github.com/<org>/<repo> -> <org>/<repo>; $HOME -> ~ ---
 short_cwd="$cwd"
@@ -118,16 +139,35 @@ fi
 # work badge (silent for personal)
 [[ -n "$badge" ]] && out+="${SEP}${badge}"
 
-# --- context window usage (the one signal the prompt can't show) ---
+# --- context window usage: absolute tokens, not percentage (the one signal
+# the prompt can't show). Thresholds are fixed absolute counts (matching
+# Anthropic's own harness practice) so the figure means the same thing on a
+# 1M-window model as a 200K one — unlike percentage, whose meaning silently
+# shifts with window size. Window size rides along after the slash, so it
+# doubles as the old "ctx·1M" label without a separate branch. Fixed-point
+# math on the raw percentage (bash has no floats): rounding to a whole
+# percent first would quantize a 1M window to 10K-token steps.
 if [[ -n "$ctx_pct" && "$ctx_pct" != "null" ]]; then
-  pct=$(printf '%.0f' "$ctx_pct" 2>/dev/null || echo 0)
+  # Security boundary, not input tidying: this regex and ctx_size's above are
+  # the only barrier between attacker-influenceable stdin and command
+  # execution via $(( )) below — deleting either yields working RCE. `10#` on
+  # ctx_whole/ctx_frac/ctx_size is NOT a backstop: it rejects `a[$(cmd)]` but
+  # not `0+a[$(cmd)]`, `1,a[$(cmd)]`, or `0 a[$(cmd)]`, which still execute.
+  [[ "$ctx_pct" =~ ^[0-9]+(\.[0-9]+)?$ ]] || ctx_pct=0
+  ctx_whole="${ctx_pct%%.*}"
+  ctx_frac="${ctx_pct#*.}"; [[ "$ctx_frac" == "$ctx_pct" ]] && ctx_frac=""
+  ctx_frac="${ctx_frac}0000"; ctx_frac="${ctx_frac:0:4}"
+  ctx_tokens=$(( (10#$ctx_whole * 10000 + 10#$ctx_frac) * ctx_size / 1000000 ))
+  # A ~19+ digit used_percentage/context_window_size legitimately passes the
+  # digits-only regexes above and overflows bash's 64-bit signed arithmetic,
+  # which can wrap to negative. Clamp UP to the red threshold, not down to 0:
+  # a headroom indicator must fail loud, not quiet, so corrupted input reads
+  # as "assume the worst" (red) rather than falsely reassuring (calm/green).
+  (( ctx_tokens < 0 )) && ctx_tokens=200000
   cc="$C_FG"
-  (( pct >= 70 )) && cc="$C_YEL"
-  (( pct >= 90 )) && cc="$C_BRED"
-  # show 1M models distinctly via size label
-  lbl="ctx"
-  [[ "$ctx_size" =~ ^[0-9]+$ && "$ctx_size" -ge 1000000 ]] && lbl="ctx·1M"
-  out+="${SEP}${C_DIM} ${lbl} ${R}${cc}${pct}%${R}"
+  (( ctx_tokens >= 150000 )) && cc="$C_YEL"
+  (( ctx_tokens >= 200000 )) && cc="$C_BRED"
+  out+="${SEP}${C_DIM} ctx ${R}${cc}$(fmt_tok "$ctx_tokens")${R}${C_DIM}/$(fmt_tok "$ctx_size")${R}"
 fi
 
 # --- subscription usage limits: "lim 5h X% · 7d Y%" (personal sessions) ---
