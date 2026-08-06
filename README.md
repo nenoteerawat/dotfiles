@@ -380,6 +380,10 @@ Configuration for [Claude Code](https://claude.com/claude-code) is tracked and s
 - **`.claude/settings.json`** — tracked + symlinked, so theme, hooks, enabled plugins, and the `statusLine` block all sync automatically (no hand-editing on a new machine).
 - **`.claude/skills/`** — tracked skills (currently `local-implementor`), reaching `~/.claude/skills/` via the whole-directory symlink, so they work in every repo and sync to a fresh machine.
 
+### Context window reference
+
+[`docs/claude-context-windows.md`](docs/claude-context-windows.md) is a dated snapshot of Claude 5-family context-window sizes, compaction defaults, and pricing, adversarially verified against primary Anthropic sources (13/13 claims confirmed as of 2026-08-06). Its headline finding: no source, official or third-party, publishes a numeric effective-context or quality-degradation threshold for any Claude 5-family model.
+
 ### Work vs personal in the status line
 
 The status line distinguishes the two accounts in several independent ways:
