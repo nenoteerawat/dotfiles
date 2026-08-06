@@ -56,8 +56,14 @@ ctx_size=$(get '.context_window.context_window_size // 200000')
 # so any future consumer inherits a validated, base-10, positive value.
 # See the ctx_pct guard below for why `10#` alone doesn't make this safe.
 [[ "$ctx_size" =~ ^[0-9]+$ ]] || ctx_size=200000
+# Length-gate BEFORE the 10# conversion: a 19+ digit string can wrap during
+# that bare parse alone, independent of the multiply further down (bash
+# silently wraps oversized literals rather than erroring). <=9 digits is
+# always < 1e9, far below wrap range, so parsing it next is safe.
+(( ${#ctx_size} > 9 )) && ctx_size=100000000
 ctx_size=$(( 10#$ctx_size ))
 (( ctx_size > 0 )) || ctx_size=200000
+(( ctx_size > 100000000 )) && ctx_size=100000000
 
 # --- shorten cwd: ~/.ghq/github.com/<org>/<repo> -> <org>/<repo>; $HOME -> ~ ---
 short_cwd="$cwd"
@@ -157,13 +163,21 @@ if [[ -n "$ctx_pct" && "$ctx_pct" != "null" ]]; then
   ctx_whole="${ctx_pct%%.*}"
   ctx_frac="${ctx_pct#*.}"; [[ "$ctx_frac" == "$ctx_pct" ]] && ctx_frac=""
   ctx_frac="${ctx_frac}0000"; ctx_frac="${ctx_frac:0:4}"
+  # Bound operands before the multiply so the product can't exceed int64:
+  # length-gate first, since a 19+ digit ctx_whole wraps the instant 10#
+  # parses it — before any `>` check even runs — so an oversized string must
+  # be replaced outright, never parsed. <=7 digits is always < 1e7, far
+  # below wrap range, so parsing it next to clamp the value is safe. Worst
+  # case (1000000*10000+9999)*100000000 ~= 1.0e18, ~9x under 2^63-1 (ctx_size
+  # is capped the same way above, lines ~58-61).
+  (( ${#ctx_whole} > 7 )) && ctx_whole=1000000
+  (( 10#$ctx_whole > 1000000 )) && ctx_whole=1000000
   ctx_tokens=$(( (10#$ctx_whole * 10000 + 10#$ctx_frac) * ctx_size / 1000000 ))
-  # A ~19+ digit used_percentage/context_window_size legitimately passes the
-  # digits-only regexes above and overflows bash's 64-bit signed arithmetic,
-  # which can wrap to negative. Clamp UP to the red threshold, not down to 0:
-  # a headroom indicator must fail loud, not quiet, so corrupted input reads
-  # as "assume the worst" (red) rather than falsely reassuring (calm/green).
-  (( ctx_tokens < 0 )) && ctx_tokens=200000
+  # Backstop, not the primary defense: clamp UP to the window size (>= the
+  # red threshold) if still out of range. A headroom indicator must fail
+  # loud, not quiet, so corrupted input reads as "assume the worst" (red)
+  # rather than falsely reassuring (calm/green).
+  (( ctx_tokens < 0 || ctx_tokens > ctx_size )) && ctx_tokens=$ctx_size
   cc="$C_FG"
   (( ctx_tokens >= 150000 )) && cc="$C_YEL"
   (( ctx_tokens >= 200000 )) && cc="$C_BRED"
