@@ -119,7 +119,7 @@ the task, surface that in your work-done summary.
 
 [[orchestrations.roles]]
 name = "release"
-command = "claude --model haiku --permission-mode auto --effort max"
+command = "claude --model sonnet --permission-mode auto --effort max"
 description = "Runs the PR-based release flow: branch, conventional commit, push, open PR, report CI/review, merge on go-ahead"
 clear = false
 prompt_template = """
