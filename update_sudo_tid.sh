@@ -18,10 +18,16 @@ SUDO_LOCAL_FILE="/etc/pam.d/sudo_local"
 # Apple-Silicon Homebrew path; on Intel this would be /usr/local/lib/pam.
 REATTACH_SO="/opt/homebrew/lib/pam/pam_reattach.so"
 
-# Already enabled? (sudo_local is world-readable, so no sudo needed to check.)
-if [[ -f "$SUDO_LOCAL_FILE" ]] && grep -q "pam_tid.so" "$SUDO_LOCAL_FILE"; then
-  echo "Touch ID is already enabled for sudo."
-  exit 0
+# Already fully configured? (sudo_local is world-readable, so no sudo needed to
+# check.) "Fully" means an uncommented pam_tid line, plus a pam_reattach line
+# whenever its .so is installed — so installing pam-reattach later and
+# re-running this script upgrades the file instead of early-exiting.
+if [[ -f "$SUDO_LOCAL_FILE" ]] && grep -q "^[^#]*pam_tid\.so" "$SUDO_LOCAL_FILE"; then
+  if [[ ! -f "$REATTACH_SO" ]] || grep -q "^[^#]*pam_reattach\.so" "$SUDO_LOCAL_FILE"; then
+    echo "Touch ID is already enabled for sudo."
+    exit 0
+  fi
+  echo "pam_reattach is installed but missing from $SUDO_LOCAL_FILE — adding it for tmux support."
 fi
 
 echo "Enabling Touch ID for sudo..."
