@@ -236,6 +236,44 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 - [Git LFS](https://git-lfs.github.com/) enabled
 - [cz-git](https://cz-git.qbb.sh/) for conventional commits
 - [lazygit](https://github.com/jesseduffield/lazygit) with commitizen integration (`C` key)
+- Work GitLab (`gitlab.tools.pttep.com`) over HTTPS with a personal access token in the macOS Keychain — setup below
+
+### Work GitLab over HTTPS (token in Keychain)
+
+`gitlab.tools.pttep.com` (work GitLab) clones over HTTPS with a personal access token. The token lives **only in the macOS Keychain** (git's `osxkeychain` credential helper, enabled system-wide by Homebrew git in `/opt/homebrew/etc/gitconfig`) — never in a tracked file. `.gitconfig` carries the non-secret half:
+
+- `[ghq "https://gitlab.tools.pttep.com/"]` → `vcs = git` — self-hosted GitLab isn't in ghq's known-hosts list, so without this `ghq get` can fail VCS detection (the go-import probe needs auth on this instance).
+- `[credential "https://gitlab.tools.pttep.com"]` → `username = oauth2` — GitLab accepts any non-blank username with a PAT, so git never prompts for one; the Keychain entry only holds the token.
+
+One-time setup on each machine:
+
+```sh
+# 1. Create the token: GitLab → avatar → Preferences → Access Tokens,
+#    scope `read_repository` (add `write_repository` to push over HTTPS).
+
+# 2. Store it in the Keychain (read -s keeps it off screen and out of shell history):
+read -rs TOKEN   # paste the token, press Enter (nothing echoes)
+printf "protocol=https\nhost=gitlab.tools.pttep.com\nusername=oauth2\npassword=%s\n" "$TOKEN" | git credential approve
+unset TOKEN
+
+# 3. Verify — should list refs with no prompt:
+git ls-remote https://gitlab.tools.pttep.com/<group>/<repo>.git
+```
+
+Then either form clones silently and lands at `~/.ghq/gitlab.tools.pttep.com/<group>/<repo>`:
+
+```sh
+ghq get https://gitlab.tools.pttep.com/<group>/<repo>
+ghq get gitlab.tools.pttep.com/<group>/<repo>     # scheme-less shorthand defaults to https
+```
+
+When the token expires or is rotated (git starts failing with HTTP 401), drop the stale entry and re-run step 2 with the new token:
+
+```sh
+printf "protocol=https\nhost=gitlab.tools.pttep.com\n" | git credential reject
+```
+
+SSH to the same host is configured separately in `.ssh/config`; HTTPS + token is the path when SSH isn't an option.
 
 ### Git Aliases
 
@@ -283,7 +321,20 @@ On macOS, clipboard is wired through `reattach-to-user-namespace` so yanks land 
 | `.scripts/cc-plan-handoff` | Claude Code hook — offers the Devstral/Qwen/Claude handoff right after you approve a plan (automode) |
 | `.scripts/cc-work-limit` | Claude Code hook — enforces the work $100/day cap — see [Claude Code](#claude-code) |
 | `.scripts/cc-credits-refresh` | Background fetch of month-to-date org API spend into the status-line cache |
+| `.scripts/vpn` | Switch between Cloudflare WARP (corporate) and Tailscale — one tunnel at a time — see [VPN switch](#vpn-switch-vpn) |
 | `update_sudo_tid.sh` | Enable TouchID for sudo (with pam_reattach for tmux) |
+
+### VPN switch (`vpn`)
+
+Cloudflare WARP (the corporate Zero Trust client) and Tailscale can't run together on this machine: WARP's gateway blocks tailscaled's control-plane traffic (login never completes — `controlplane.tailscale.com` dials fail with "no route to host" / "connection refused"), and `warp-cli disconnect` is **policy-locked**. The only local off-switch is unloading WARP's root launchd daemon, so each switch costs one sudo (TouchID) prompt:
+
+```bash
+vpn ts       # stop the WARP daemon, verify DNS recovered, tailscale up
+vpn warp     # tailscale down (stays logged in), bootstrap the WARP daemon back
+vpn status   # no sudo — report both sides
+```
+
+Both switches are idempotent. The first-ever `vpn ts` prints a Tailscale login URL; after that the login persists and switching is instant. **Reboot (or an MDM re-push) restores WARP** — the plist stays in `/Library/LaunchDaemons`, so the machine's default state remains "corporate" and you just run `vpn ts` again. If WARP reappears on its own within minutes, MDM is re-launching it; the durable fix is asking IT for Split Tunnel exclusions (`*.tailscale.com`, `100.64.0.0/10`), not this script.
 
 ## Other Config Files
 

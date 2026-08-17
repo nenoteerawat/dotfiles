@@ -163,8 +163,43 @@
       }
     }
   },
+  "fastMode": true,
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
-  "theme": "auto"
+  "theme": "auto",
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Bash(dot-agent-deck:*) in nenoteerawat/dotfiles",
+      "Bash(cc-review:*) in nenoteerawat/dotfiles",
+      "Bash(ollama:*) in nenoteerawat/dotfiles"
+    ],
+    "environment": [
+      "### Org-wide",
+      "**Organization**: pttep (pttep-pcl, pttep-fusionsol GitHub orgs; gitlab.tools.pttep.com self-hosted GitLab) — work-account context only, not this repo's context",
+      "**Cloud provider(s)**: None configured",
+      "**Repository visibility**: PUBLIC — nenoteerawat/dotfiles (origin, ssh://github.com/nenoteerawat/dotfiles.git). Any push here is publishing.",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: macOS Keychain (osxkeychain git credential helper) for the work GitLab PAT; local chmod-600 JSON files outside the repo (~/.claude/work-auth.json, ~/.claude/statusline-credits.env) for Claude Code work-auth and Admin API key — none of these are committed to this repo",
+      "**Default / protected branches**: default branch `master`; no branch protection rules or rulesets listed by gh for nenoteerawat/dotfiles — treat as unprotected",
+      "**CI/CD deploy targets**: None configured (repo's `.github/workflows` runs anthropics/claude-code-action@beta for PR/issue automation only, not a deploy pipeline)",
+      "**Network posture**: None configured",
+      "**Source control**: The trusted repo is nenoteerawat/dotfiles (this checkout) and its `origin` remote (ssh://github.com/nenoteerawat/dotfiles.git) only — public repo, so only this repo's own work belongs there; content ported from elsewhere (e.g. work GitLab, pttep orgs) is not this repo's own work and should not be pushed here",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: gitlab.tools.pttep.com (self-hosted work GitLab, HTTPS with oauth2/PAT credential helper) — work-account infrastructure, out of scope for this public personal repo; controlplane.tailscale.com seen once in this project's transcripts (Tailscale control plane)",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: `~/.claude/work-auth.json` (chmod 600, work API credentials), `~/.claude/statusline-credits.env` (chmod 600, Anthropic Admin API key), `~/.ssh/` private keys/known_hosts (repo tracks only `.ssh/config`) — none of these live in or belong in this repo; share only with the local user",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace/host/container with `prod`/`production` as a whole word or segment; work GitLab (gitlab.tools.pttep.com) and pttep-pcl/pttep-fusionsol GitHub orgs are separate work-account infrastructure, not part of this repo's trust boundary",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: personal dotfiles management/development (macOS shell, editor, tmux configs) plus a local-model orchestration/automation setup (OpenCode+Ollama, dot-agent-deck) — hobby/personal posture",
+      "**Trusted repo**: nenoteerawat/dotfiles (this checkout at ~/.ghq/github.com/nenoteerawat/dotfiles) and its `origin` remote — public, so only this repo's own authored work should be pushed/committed here",
+      "**Org-specific CLIs**: cc-auth, cc-ollama, cc-review, cc-credits-refresh, cc-work-limit, cc-plan-handoff, cc-impl-status, dot-agent-deck, ghq-sparo, cdz — personal `.scripts/` tooling for this machine, routine within this repo/home directory",
+      "routine under ~/.scripts/, ~/.claude/, and ~/.config/ prefixes on this machine (symlink targets of this repo)"
+    ]
+  }
 }

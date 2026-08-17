@@ -56,6 +56,18 @@
 	process = git-lfs filter-process
 [ghq]
   root = ~/.ghq
+# Self-hosted GitLab isn't in ghq's known-hosts list, so tell it the VCS backend
+# explicitly — without this `ghq get https://gitlab.tools.pttep.com/...` can fail
+# VCS detection (the go-import probe needs auth on this instance).
+[ghq "https://gitlab.tools.pttep.com/"]
+	vcs = git
+# HTTPS auth for work GitLab uses a personal access token stored in the macOS
+# Keychain (osxkeychain helper, set system-wide in /opt/homebrew/etc/gitconfig).
+# GitLab accepts any non-blank username with a PAT; pinning it here means git
+# never prompts for one and the Keychain entry only holds the token. Seed once:
+#   printf "protocol=https\nhost=gitlab.tools.pttep.com\nusername=oauth2\npassword=<TOKEN>\n" | git credential approve
+[credential "https://gitlab.tools.pttep.com"]
+	username = oauth2
 # Route pttep work orgs to the work-account SSH host alias (github.com-pttep -> pttep_gh_id).
 # All three URL spellings are rewritten so `ghq get` works with any of them while keeping
 # the clean ~/.ghq/github.com/<org>/<repo> layout (ghq derives the path from the original

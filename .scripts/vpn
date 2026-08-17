@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# vpn [ts|warp|status]
+#
+# One-at-a-time switch between Cloudflare WARP (corporate Zero Trust) and
+# Tailscale on this machine. The two cannot coexist here: WARP's gateway
+# blocks tailscaled's control-plane traffic (controlplane.tailscale.com ->
+# "no route to host" / DERP direct-IP -> "connection refused"), and
+# `warp-cli disconnect` is policy-locked ("Operation not authorized in this
+# context"). The ONLY local off-switch for WARP is unloading its root launchd
+# daemon, so every `vpn ts` costs one sudo (TouchID) prompt. `vpn warp` costs
+# one too (bootstrap the daemon back).
+#
+#   ts      switch to Tailscale: bootout the WARP daemon, verify DNS came
+#           back, then `tailscale up` (first ever run prints a login URL;
+#           after that the login persists and this is instant)
+#   warp    switch to WARP: `tailscale down` (stays logged in), then
+#           bootstrap the WARP daemon and wait for Connected
+#   status  no sudo; report both sides
+#
+# Both switches are idempotent — asking for the state you're already in is a
+# no-op. Reboot (or an MDM re-push) restores WARP: the plist stays in
+# /Library/LaunchDaemons, so the machine's default state remains "corporate"
+# and you just run `vpn ts` again when needed. If WARP reappears on its own
+# within minutes, MDM is re-launching it — the durable fix is asking IT for
+# Split Tunnel exclusions (*.tailscale.com, 100.64.0.0/10), not this script.
+
+set -euo pipefail
+
+WARP_LABEL="com.cloudflare.1dot1dot1dot1.macos.warp.daemon"
+WARP_PLIST="/Library/LaunchDaemons/${WARP_LABEL}.plist"
+
+die() { echo "vpn: $*" >&2; exit 1; }
+
+warp_daemon_running() { pgrep -f 'Cloudflare WARP.app/Contents/Resources/CloudflareWARP' >/dev/null 2>&1; }
+
+tailscale_state() {
+  # Running | Stopped | NeedsLogin | ... ; "unavailable" if the app/daemon is off
+  tailscale status --json 2>/dev/null | jq -r '.BackendState' 2>/dev/null || echo unavailable
+}
+
+wait_for() {  # wait_for <seconds> <cmd...> — poll a condition, 1s apart
+  local deadline=$(( $(date +%s) + $1 )); shift
+  until "$@"; do
+    [ "$(date +%s)" -ge "$deadline" ] && return 1
+    sleep 1
+  done
+}
+
+cmd_status() {
+  if warp_daemon_running; then
+    echo "warp:      running ($(warp-cli status 2>/dev/null | head -1 || echo 'status unavailable'))"
+  else
+    echo "warp:      stopped"
+  fi
+  echo "tailscale: $(tailscale_state)"
+}
+
+cmd_ts() {
+  command -v tailscale >/dev/null || die "tailscale CLI not found"
+  if warp_daemon_running; then
+    echo "Stopping WARP daemon (sudo — TouchID)..."
+    sudo launchctl bootout "system/$WARP_LABEL"
+    wait_for 10 bash -c '! pgrep -f "Cloudflare WARP.app/Contents/Resources/CloudflareWARP" >/dev/null' \
+      || die "WARP process still alive after bootout"
+  else
+    echo "WARP already stopped."
+  fi
+  # WARP normally removes its 127.0.2.2 DNS override on shutdown; make sure
+  if ! wait_for 10 dscacheutil -q host -a name controlplane.tailscale.com >/dev/null; then
+    echo "vpn: warning — DNS not resolving after WARP shutdown; try: sudo networksetup -setdnsservers Wi-Fi Empty" >&2
+  fi
+  echo "Bringing Tailscale up..."
+  tailscale up
+  cmd_status
+}
+
+cmd_warp() {
+  [ -f "$WARP_PLIST" ] || die "WARP plist not found at $WARP_PLIST (is WARP installed?)"
+  if [ "$(tailscale_state)" = "Running" ]; then
+    echo "Bringing Tailscale down (stays logged in)..."
+    tailscale down
+  fi
+  if warp_daemon_running; then
+    echo "WARP already running."
+  else
+    echo "Starting WARP daemon (sudo — TouchID)..."
+    sudo launchctl bootstrap system "$WARP_PLIST"
+    wait_for 20 bash -c 'warp-cli status 2>/dev/null | grep -q Connected' \
+      || echo "vpn: warning — WARP daemon started but not Connected yet; check warp-cli status" >&2
+  fi
+  cmd_status
+}
+
+case "${1:-status}" in
+  ts)     cmd_ts ;;
+  warp)   cmd_warp ;;
+  status) cmd_status ;;
+  -h|--help) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) die "unknown command '$1' (usage: vpn [ts|warp|status])" ;;
+esac
