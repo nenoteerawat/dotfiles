@@ -31,6 +31,7 @@ get() { printf '%s' "$input" | jq -r "$1" 2>/dev/null; }
 
 # helper: format a token count as e.g. 182000 -> "182K", 1000000 -> "1M"
 fmt_tok() {
+  [[ $1 =~ ^[0-9]+$ ]] || { printf '0'; return; }
   local n=$1 w r
   if (( n >= 1000000 )); then
     w=$(( n / 1000000 )); r=$(( (n % 1000000) * 10 / 1000000 ))
@@ -43,12 +44,29 @@ fmt_tok() {
   fi
 }
 
+# helper: format session duration ms as e.g. 45000 -> "45s", 754000 -> "12m34s", 4200000 -> "1h10m"
+fmt_dur() {
+  [[ $1 =~ ^[0-9]+$ ]] || { printf '0s'; return; }
+  local ms=$1 s h m
+  s=$(( ms / 1000 ))
+  if (( s < 60 )); then
+    printf '%ds' "$s"
+  elif (( s < 3600 )); then
+    m=$(( s / 60 )); s=$(( s % 60 ))
+    printf '%dm%02ds' "$m" "$s"
+  else
+    h=$(( s / 3600 )); m=$(( (s % 3600) / 60 ))
+    printf '%dh%02dm' "$h" "$m"
+  fi
+}
+
 model=$(get '.model.display_name // "Claude"')
 [[ -z "$model" ]] && model="Claude"
 cwd=$(get '.workspace.current_dir // .cwd // ""')
 cost=$(get '.cost.total_cost_usd // 0')
 added=$(get '.cost.total_lines_added // 0')
 removed=$(get '.cost.total_lines_removed // 0')
+duration_ms=$(get '.cost.total_duration_ms // 0')
 ctx_pct=$(get '.context_window.used_percentage // empty')
 ctx_size=$(get '.context_window.context_window_size // 200000')
 # Security boundary, not input tidying: ctx_size reaches bash $(( ))
@@ -181,7 +199,17 @@ if [[ -n "$ctx_pct" && "$ctx_pct" != "null" ]]; then
   cc="$C_FG"
   (( ctx_tokens >= 150000 )) && cc="$C_YEL"
   (( ctx_tokens >= 200000 )) && cc="$C_BRED"
-  out+="${SEP}${C_DIM} ctx ${R}${cc}$(fmt_tok "$ctx_tokens")${R}${C_DIM}/$(fmt_tok "$ctx_size")${R}"
+  # 10-cell block bar: fill fraction is share-of-window (ctx_tokens/ctx_size,
+  # both already bounded above), but its COLOR reuses cc — the fixed
+  # absolute-token thresholds, not a window-relative pct — so bar and text
+  # never disagree about how alarmed to look. No new jq call: both inputs
+  # are already-computed, already-hardened integers.
+  ctx_bar_pct=$(( ctx_tokens * 100 / ctx_size ))
+  ctx_filled=$(( ctx_bar_pct / 10 )); ctx_empty=$(( 10 - ctx_filled ))
+  printf -v ctx_fill '%*s' "$ctx_filled" ''
+  printf -v ctx_pad '%*s' "$ctx_empty" ''
+  ctx_bar="${ctx_fill// /█}${ctx_pad// /░}"
+  out+="${SEP}${C_DIM} ctx ${R}${cc}${ctx_bar} ${ctx_bar_pct}%${R} ${cc}$(fmt_tok "$ctx_tokens")${R}${C_DIM}/$(fmt_tok "$ctx_size")${R}"
 fi
 
 # --- subscription usage limits: "lim 5h X% · 7d Y%" (personal sessions) ---
@@ -225,6 +253,16 @@ if awk "BEGIN{exit !(($cost)+0 > 0)}" 2>/dev/null; then
   awk "BEGIN{exit !(($cost)+0 >= 5)}"  2>/dev/null && costc="$C_YEL"
   awk "BEGIN{exit !(($cost)+0 >= 20)}" 2>/dev/null && costc="$C_BRED"
   out+="${SEP}${costc}\$$(printf '%.2f' "$cost" 2>/dev/null)${R}"
+fi
+
+# --- session duration: "dur 12m34s" (dim/neutral — informational, not a
+# threshold to escalate on) ---
+duration_ms=${duration_ms%%.*}
+[[ "$duration_ms" =~ ^[0-9]+$ ]] || duration_ms=0
+# Length-gate: bash silently wraps oversized decimal literals in $(( )) (see ctx_size above).
+(( ${#duration_ms} > 9 )) && duration_ms=0
+if (( duration_ms >= 1000 )); then
+  out+="${SEP}${C_DIM}dur ${R}${C_FG}$(fmt_dur "$duration_ms")${R}"
 fi
 
 # --- lines changed this session ---

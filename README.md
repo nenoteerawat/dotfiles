@@ -427,7 +427,7 @@ Measured on an M5 Max (48 GB): ~860 tok/s reading the spec, ~21 tok/s writing co
 
 Configuration for [Claude Code](https://claude.com/claude-code) is tracked and symlinked so it syncs to a fresh machine via `install.sh`. Local state and secrets stay per-machine in the gitignored `~/.claude/settings.local.json`.
 
-- **`.claude/statusline.sh`** — a custom status line ("Beacon"): model name, ghq-shortened `org/repo`, branch + dirty `*` + ahead/behind, a **work** badge for pttep repos, live context-window `%`, session cost, lines `+/-`, and an `impl ●7m r2` segment while a local-implementor run is active. Flat truecolor on the terminal's translucent background — no powerline glyphs. Needs `jq`. Test it with `echo '{...}' | ~/.claude/statusline.sh`.
+- **`.claude/statusline.sh`** — a custom status line ("Beacon"): model name, ghq-shortened `org/repo`, branch + dirty `*` + ahead/behind, a **work** badge for pttep repos, a context-usage bar + absolute-token `ctx` readout, session cost + duration, lines `+/-`, and an `impl ●7m r2` segment while a local-implementor run is active. Flat truecolor on the terminal's translucent background — no powerline glyphs. Needs `jq`. Test it with `echo '{...}' | ~/.claude/statusline.sh`.
 - **`.claude/settings.json`** — tracked + symlinked, so theme, hooks, enabled plugins, and the `statusLine` block all sync automatically (no hand-editing on a new machine).
 - **`.claude/skills/`** — tracked skills (currently `local-implementor`), reaching `~/.claude/skills/` via the whole-directory symlink, so they work in every repo and sync to a fresh machine.
 
