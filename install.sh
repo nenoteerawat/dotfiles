@@ -21,8 +21,6 @@
 #                   gcloud source in .zshrc lines 60-61).
 #   --with-docker   Install the docker-desktop cask.
 #   --with-goland   Install the GoLand cask (JetBrains, license-gated).
-#   --with-localai  Install the local AI coding implementor (Ollama + OpenCode)
-#                   and pull the Devstral model (~25GB). See CLAUDE.md.
 #   --with-touchid  Run ./update_sudo_tid.sh (TouchID for sudo; needs sudo).
 #   --with-macos    Run ./.macos system tweaks (needs sudo; invasive).
 #   --sync-nvim     Headless LazyVim plugin sync after linking.
@@ -35,7 +33,7 @@ set -euo pipefail
 # --------------------------------------------------------------------------- #
 MINIMAL=0; CASKS=1; DO_CHSH=1; DEV_EXTRAS=0
 WITH_CLOUD=0; WITH_DOCKER=0; WITH_GOLAND=0
-WITH_TOUCHID=0; WITH_MACOS=0; SYNC_NVIM=0; WITH_LOCALAI=0
+WITH_TOUCHID=0; WITH_MACOS=0; SYNC_NVIM=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -46,7 +44,6 @@ for arg in "$@"; do
     --with-cloud)   WITH_CLOUD=1 ;;
     --with-docker)  WITH_DOCKER=1 ;;
     --with-goland)  WITH_GOLAND=1 ;;
-    --with-localai) WITH_LOCALAI=1 ;;
     --with-touchid) WITH_TOUCHID=1 ;;
     --with-macos)   WITH_MACOS=1 ;;
     --sync-nvim)    SYNC_NVIM=1 ;;
@@ -198,15 +195,13 @@ else mkdir -p "$(dirname "$TPM")"; git clone --depth 1 https://github.com/tmux-p
 step "Linking authored config files (per-file; tool-generated files stay out of the repo)"
 
 HOME_FILES=(.zshrc .gitconfig .czrc update_sudo_tid.sh .ssh/config .claude/statusline.sh .claude/settings.json)
-CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty .config/opencode)
+CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty)
 # Whole-directory symlinks: ~/X -> repo/X. Only for dirs with NO tool-generated
 # files (unlike .config/* which gets Mason/lazy-lock/plugins written into it), so
 # a whole-dir symlink is safe AND new authored files appear without re-running
 # install.sh. .scripts is also on $PATH (see .zshrc), so cc-auth/ide are
-# bare commands from any repo. .claude/skills holds authored user-level Claude
-# Code skills (nothing writes there but us); a skill created in ~/.claude/skills
-# lands in the repo automatically — commit it from there.
-HOME_DIRS=(.scripts .claude/skills)
+# bare commands from any repo.
+HOME_DIRS=(.scripts)
 
 link_one() { # link_one <repo-relative-path>  ->  ~/<same-path>
   local rel="$1" src="$REPO/$1" dst="$HOME/$1"
@@ -336,45 +331,6 @@ fi
 # --------------------------------------------------------------------------- #
 # 11. Optional one-shot system steps
 # --------------------------------------------------------------------------- #
-if [ "$WITH_LOCALAI" = 1 ]; then
-  # Local AI coding implementor: Ollama (GGUF via llama.cpp Metal) + OpenCode
-  # (autonomous agent CLI). Config is linked from .config/opencode/opencode.json
-  # (see CONFIG_DIRS). Devstral is the reliable default; Qwen3.6-35B-A3B is the
-  # optional benchmark challenger (pull it by hand — its GGUF tool-calling is
-  # less proven). See CLAUDE.md → "Local AI implementor".
-  step "Local AI implementor (Ollama + OpenCode)"
-  brewf ollama opencode
-  # Flash-attention is server-level (safe as env). The agent CONTEXT is baked
-  # into the model via a Modelfile below — NOT OLLAMA_CONTEXT_LENGTH, which a
-  # brew-services daemon capped to 32768 in testing (Ollama's 4K default silently
-  # truncates agent loops, so getting the full 65536 to stick actually matters).
-  launchctl setenv OLLAMA_FLASH_ATTENTION 1 2>/dev/null || true
-  if command -v ollama >/dev/null 2>&1; then
-    brew services start ollama >/dev/null 2>&1 && ok "ollama service started" || true
-    if ollama pull devstral-small-2:24b-instruct-2512-q8_0; then
-      mf="$(mktemp)"
-      printf 'FROM devstral-small-2:24b-instruct-2512-q8_0\nPARAMETER num_ctx 65536\nPARAMETER temperature 0.2\nPARAMETER top_p 0.95\n' > "$mf"
-      ollama create devstral-small-2:24b -f "$mf" && ok "devstral-small-2:24b ready (65536 ctx baked in)" \
-        || warn "ollama create failed — build devstral-small-2:24b from a num_ctx Modelfile manually"
-      rm -f "$mf"
-    else
-      warn "devstral pull failed — run 'ollama pull devstral-small-2:24b-instruct-2512-q8_0' manually"
-    fi
-    warn "optional challenger (benchmark before making it the default): 'ollama pull hf.co/unsloth/Qwen3.6-35B-A3B-GGUF:Q6_K' downloads the blobs but 400s on import (hf.co-manifest bug); build 'qwen3.6-35b-a3b' from the ~27GB sha256 blob in ~/.ollama/models/blobs via a num_ctx 65536 Modelfile. See CLAUDE.md."
-    # Seed cc-ollama routing in THIS dotfiles repo (per-repo, mirrors cc-auth's stamp
-    # pattern): routes Claude Code's opus/sonnet/haiku/fable aliases to local Ollama
-    # models. Run `cc-ollama on` in other repos to use local models there; `cc-ollama
-    # off` to revert. Refuses if cc-auth work creds are stamped here.
-    if "$REPO/.scripts/cc-ollama" on "$REPO" >/dev/null 2>&1; then
-      ok "cc-ollama on → this repo routes Claude Code to local Ollama models (run 'cc-ollama on' in other repos; 'cc-ollama off' to revert)"
-    else
-      warn "cc-ollama on skipped (cc-auth work creds stamped here? run 'cc-auth personal' first)"
-    fi
-  else
-    warn "ollama not on PATH after install — re-run, or 'brew install ollama'"
-  fi
-fi
-
 if [ "$WITH_TOUCHID" = 1 ]; then
   step "TouchID for sudo"
   brewf pam-reattach
