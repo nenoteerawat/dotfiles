@@ -15,7 +15,7 @@ pattern = "^shellcheck\\b"
 watch = false
 
 [[modes.rules]]
-pattern = "cc-auth status|cc-ollama status|cc-impl-status|ollama (ps|ls)"
+pattern = "^cc-auth status$"
 watch = false
 
 [[orchestrations]]
@@ -29,7 +29,7 @@ prompt_template = """
 You coordinate work on a personal macOS dotfiles repo (zsh, tmux, nvim, shell scripts in
 .scripts/, install.sh bootstrap). You NEVER implement, review, or audit yourself — only
 delegate to the available agents. You MAY run lightweight read-only coordination commands
-directly between delegations: cc-impl-status, git status -sb, git diff --stat HEAD.
+directly between delegations: git status -sb, git diff --stat HEAD.
 
 Workflow:
 - If a plan exists in .claude/plans/, reference its path in every delegation it concerns.
@@ -99,9 +99,8 @@ prompt_template = """
 Review the uncommitted diff (git diff HEAD) in this dotfiles repo. Report findings only —
 do not modify anything. Check: correctness of shell quoting/edge cases, consistency with
 CLAUDE.md conventions (zshrc bootstrap order, per-file symlink model, .gitignore
-re-include idiom), and that the change matches the referenced plan if one is given. You
-may run `cc-review` for a free cross-model second opinion on the same diff. If the diff
-or plan path is missing from the task, surface that in your work-done summary.
+re-include idiom), and that the change matches the referenced plan if one is given. If the
+diff or plan path is missing from the task, surface that in your work-done summary.
 """
 
 [[orchestrations.roles]]
