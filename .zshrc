@@ -205,14 +205,23 @@ fzf_change_directory() {
       find "$(ghq root)" -maxdepth 4 -type d -name .git 2>/dev/null | sed 's/\/\.git$//'
     fi
 
-    # 3) Specific groups (match fish: base/* then -maxdepth 1 -type d, then grep -v -E)
-    find $HOME/.ghq/gitlab.tools.pttep.com/ep-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
-    find $HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
-    find $HOME/.ghq/gitlab.tools.pttep.com/aws-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
-    find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    # 3) Specific groups. find the group dir directly, not "dir/*": a
+    # missing/empty group makes that bare glob trip zsh's NOMATCH, which
+    # prints "no matches found" past this line's own 2>/dev/null (expansion
+    # fails before find, and its redirect, ever runs). mindepth 1/maxdepth 2
+    # reproduces the old "group/* then -maxdepth 1" depth (repo + its children).
+    find "$HOME/.ghq/gitlab.tools.pttep.com/ep-digital-platform" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    find "$HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    find "$HOME/.ghq/gitlab.tools.pttep.com/aws-digital-platform" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+    find "$HOME/.ghq/gitlab.tools.pttep.com/devsecops" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
 
-    # 4) Current dir immediate subdirs → absolute, then ignore
-    ls -ad */ 2>/dev/null | perl -pe "s#^#$PWD/#" | grep -v -E "$ignore_dir"
+    # 4) Current dir immediate subdirs, already absolute (same NOMATCH risk
+    # as above when cwd has no subdirs, fixed the same way; ! -name '.*'
+    # keeps the old glob's implicit dotfile exclusion). -L dereferences
+    # symlinks so a symlinked subdir still shows (the old `ls -ad */` glob
+    # followed symlinks too); 2>/dev/null now also covers -L's "No such
+    # file or directory" on a dangling symlink.
+    find -L "$PWD" -mindepth 1 -maxdepth 1 -type d ! -name '.*' 2>/dev/null | grep -v -E "$ignore_dir"
   } | sed -e 's/\/$//' | awk '!a[$0]++' | fzf "$@" | while read -r dir; do
     cd "$dir" # && nvim .
   done

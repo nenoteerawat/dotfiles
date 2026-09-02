@@ -15,10 +15,16 @@ function fzf_change_directory
         echo $HOME/.config
         echo $HOME/.ghq/github.com/nenoteerawat/dotfiles
         find $(ghq root) -maxdepth 4 -type d -name .git | sed 's/\/\.git//'
-        find $HOME/.ghq/gitlab.tools.pttep.com/ep-digital-platform/* -maxdepth 1 -type d | grep -v -E $ignore_dir
-        find $HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
-        find $HOME/.ghq/gitlab.tools.pttep.com/aws-digital-platform/* -maxdepth 1 -type d 2>/dev/null | grep -v -E "$ignore_dir"
-        find $HOME/.ghq/gitlab.tools.pttep.com/devsecops/* -maxdepth 1 -type d | grep -v -E $ignore_dir
-        ls -ad */ | perl -pe "s#^#$PWD/#" | grep -v -E $ignore_dir
+        # find the group dir directly, not "dir/*": a missing/empty group
+        # makes that bare wildcard abort with "No matches for wildcard",
+        # printed past this line's own 2>/dev/null (same failure class as
+        # zsh's NOMATCH — expansion fails before find, and its redirect,
+        # ever runs). mindepth 1/maxdepth 2 reproduces the old depth.
+        find "$HOME/.ghq/gitlab.tools.pttep.com/ep-digital-platform" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+        find "$HOME/.ghq/gitlab.tools.pttep.com/digital-workspace-platform" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+        find "$HOME/.ghq/gitlab.tools.pttep.com/aws-digital-platform" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+        find "$HOME/.ghq/gitlab.tools.pttep.com/devsecops" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | grep -v -E "$ignore_dir"
+        # current dir immediate subdirs, already absolute (same wildcard fix as above)
+        find -L "$PWD" -mindepth 1 -maxdepth 1 -type d ! -name '.*' 2>/dev/null | grep -v -E $ignore_dir
     end | sed -e 's/\/$//' | awk '!a[$0]++' | _fzf_change_directory $argv
 end

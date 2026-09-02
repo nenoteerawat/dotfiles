@@ -112,6 +112,8 @@ Autocompletions are configured for:
 | `vim` / `vi` | Alias for `nvim` |
 | `gcl` | Alias for `gitlab-ci-local` |
 
+`Ctrl+F`'s GitLab group search roots must be literal directories passed to `find -mindepth`/`-maxdepth`, never a bare glob like `<root>/*`, which can abort under zsh's `NOMATCH` when a group is missing or empty.
+
 ## Fish setup
 
 Fish shell configuration with platform-specific configs (macOS/Linux/Windows). Note: `install.sh` is zsh-only, so the fish tree is secondary to the primary zsh config.
