@@ -7,6 +7,11 @@ export PATH="$HOME/.scripts:$PATH"
 export GOPATH=$HOME/.go
 export PATH=$PATH:$GOPATH/bin
 
+# PostgreSql PATH
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+export LDFLAGS="-L/opt/homebrew/opt/libpq/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/libpq/include"
+
 # Goland Jetbrain IDE
 export PATH=$PATH:Applications/GoLand.app/Contents/MacOS
 
@@ -257,3 +262,5 @@ source ~/.ghq/github.com/Aloxaf/fzf-tab/fzf-tab.plugin.zsh
 [ -x /opt/homebrew/bin/terraform ]  && complete -o nospace -C /opt/homebrew/bin/terraform terraform
 [ -x /opt/homebrew/bin/terragrunt ] && complete -o nospace -C /opt/homebrew/bin/terragrunt terragrunt
 [ -x /opt/homebrew/bin/vault ]      && complete -o nospace -C /opt/homebrew/bin/vault vault
+
+export PATH="/Users/nenoteerawat/.local/bin:$PATH"  # added by boost installer (/Users/nenoteerawat/.local/bin)
