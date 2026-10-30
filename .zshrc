@@ -103,8 +103,6 @@ if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
 elif [ -e /nix/var/nix/profiles/default/etc/profile.d/nix.sh ]; then
   source /nix/var/nix/profiles/default/etc/profile.d/nix.sh
 fi
-# Setup DevBox Global (guarded: only if devbox is installed)
-command -v devbox >/dev/null 2>&1 && eval "$(devbox global shellenv --init-hook)"
 #compdef gitlab-ci-local
 ###-begin-gitlab-ci-local-completions-###
 #
