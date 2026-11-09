@@ -1,0 +1,48 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": true,
+  // Hide OpenCode's built-in direct-to-ollama.com provider; cloud tags go through local Ollama below.
+  "disabled_providers": ["ollama-cloud"],
+  // Default: fast local MoE. Switch with /models or `opencode --model ollama/<tag>`.
+  "model": "ollama/qwen3.6:35b-a3b-coding-nvfp4",
+  "provider": {
+    // One provider for both local and cloud: `:cloud` tags are routed by the
+    // local Ollama server to ollama.com (needs `ollama signin` once).
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        // ---- local (MLX NVFP4, M5 Max 48 GB) ----
+        // 35B MoE, 3B active — fast daily driver, 24 GB.
+        "qwen3.6:35b-a3b-coding-nvfp4": {
+          "name": "Local · Qwen3.6 35B-A3B Coding (fast)",
+          "limit": { "context": 65536, "output": 32768 }
+        },
+        // 27B dense — stronger, ~3-4x slower, 18 GB.
+        "qwen3.8:27b-nvfp4": {
+          "name": "Local · Qwen3.8 27B (quality)",
+          "limit": { "context": 65536, "output": 32768 }
+        },
+        // ---- cloud (pay per token via ollama.com) ----
+        // Main cloud coder: best agentic scores, $0.30/$1.20 per 1M.
+        "deepseek-v4.1-flash:cloud": {
+          "name": "Cloud · DeepSeek V4.1 Flash (main)",
+          "limit": { "context": 1000000, "output": 65536 }
+        },
+        // Cheapest coder: $0.15/$0.60 per 1M.
+        "minimax-m3.1-flash:cloud": {
+          "name": "Cloud · MiniMax M3.1 Flash (cheap)",
+          "limit": { "context": 976000, "output": 65536 }
+        },
+        // Hardest tasks: $1.32/$3.96, half price off-peak (outside 12–18 UTC weekdays = Thai daytime).
+        "deepseek-v4-pro:cloud": {
+          "name": "Cloud · DeepSeek V4 Pro (heavy)",
+          "limit": { "context": 1000000, "output": 65536 }
+        }
+      }
+    }
+  }
+}
