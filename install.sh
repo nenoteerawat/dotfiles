@@ -195,7 +195,7 @@ else mkdir -p "$(dirname "$TPM")"; git clone --depth 1 https://github.com/tmux-p
 step "Linking authored config files (per-file; tool-generated files stay out of the repo)"
 
 HOME_FILES=(.zshrc .gitconfig .czrc update_sudo_tid.sh .ssh/config .claude/statusline.sh .claude/settings.json)
-CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty .config/opencode)
+CONFIG_DIRS=(.config/nvim .config/tmux .config/lazygit .config/mise .config/ghostty .config/opencode .config/homebrew)
 # Whole-directory symlinks: ~/X -> repo/X. Only for dirs with NO tool-generated
 # files (unlike .config/* which gets Mason/lazy-lock/plugins written into it), so
 # a whole-dir symlink is safe AND new authored files appear without re-running

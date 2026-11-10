@@ -3,6 +3,15 @@
   "lsp": true,
   // Hide OpenCode's built-in direct-to-ollama.com provider; cloud tags go through local Ollama below.
   "disabled_providers": ["ollama-cloud"],
+  // Compaction is global (not per model). keep.tokens is lowered from the 15000 default so a
+  // local-model compaction lands at ~18K (8.6K system+tools, summary, 8K tail), not back at the
+  // 32K threshold. Threshold itself = limit.context - max(15%, 16K); see each model's limit.
+  "compaction": { "auto": true, "keep": { "tokens": 8000 } },
+  // Cap what a single tool result can add to the context. The 51200-byte default let one
+  // `curl index.yaml | head -20` add 14.5K tokens in a turn; the full output is still saved to
+  // disk, only the transcript copy is truncated. NOTE: OpenCode 2.2.6 does not know this key and
+  // drops it silently (`opencode debug config` shows it missing) — it takes effect after an upgrade.
+  "tool_output": { "max_lines": 400, "max_bytes": 16384 },
   // Default: fast local MoE. Switch with /models or `opencode --model ollama/<tag>`.
   "model": "ollama/qwen3.6:35b-a3b-coding-nvfp4",
   "provider": {
@@ -19,12 +28,14 @@
         // 35B MoE, 3B active — fast daily driver, 24 GB.
         "qwen3.6:35b-a3b-coding-nvfp4": {
           "name": "Local · Qwen3.6 35B-A3B Coding (fast)",
-          "limit": { "context": 65536, "output": 32768 }
+          // 49152 - 16K compaction buffer => auto-compact at 32K. 42K context pushed the
+          // runner to 30 GB resident with 19 GB compressed (2026-11-10), so 32K is the cap.
+          "limit": { "context": 49152, "output": 8192 }
         },
         // 27B dense — stronger, ~3-4x slower, 18 GB.
         "qwen3.8:27b-nvfp4": {
           "name": "Local · Qwen3.8 27B (quality)",
-          "limit": { "context": 65536, "output": 32768 }
+          "limit": { "context": 49152, "output": 8192 }
         },
         // ---- cloud (pay per token via ollama.com) ----
         // Main cloud coder: best agentic scores, $0.30/$1.20 per 1M.
@@ -63,6 +74,14 @@
     "chrome-devtools": {
       "type": "local",
       "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
+    },
+    "docker": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-docker-server"]
+    },
+    "kubernetes": {
+      "type": "local",
+      "command": ["npx", "-y", "kubectl-mcp-server"]
     }
   }
 }
