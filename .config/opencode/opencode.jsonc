@@ -41,8 +41,28 @@
         "deepseek-v4-pro:cloud": {
           "name": "Cloud · DeepSeek V4 Pro (heavy)",
           "limit": { "context": 1000000, "output": 65536 }
+        },
+        // Best open-weights coder for long-horizon agent work: $1.40/$4.40 per 1M.
+        // Needs an Ollama Pro plan ("larger pro models"). reasoning_effort: low|high|max, defaults to max.
+        "glm-5.3:cloud": {
+          "name": "Cloud · GLM-5.3 (best coder)",
+          "limit": { "context": 1000000, "output": 65536 }
         }
       }
+    }
+  },
+  "mcp": {
+    "github": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "environment": {
+        "GITHUB_AUTH_METHOD": "ssh",
+        "GITHUB_SSH_PRIVATE_KEY_PATH": "/Users/nenoteerawat/.ssh/pttep_gh_id"
+      }
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
     }
   }
 }
